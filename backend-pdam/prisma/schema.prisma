@@ -1,0 +1,55 @@
+// Lokasi: backend-pdam/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String    @unique
+  password  String
+  address   String
+  role      Role      @default(PELANGGAN)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  
+  tagihan   Tagihan[] 
+  pengaduan Pengaduan[] // Relasi baru ke pengaduan
+}
+
+model Tagihan {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  user         User     @relation(fields: [userId], references: [id]) 
+  bulan        String
+  tahun        Int
+  meter_awal   Int
+  meter_akhir  Int
+  total_bayar  Int
+  status_bayar String   @default("BELUM_BAYAR") 
+  bukti_bayar  String?  
+  createdAt    DateTime @default(now())
+}
+
+// MODEL BARU: PENGADUAN (Lapor Kerusakan)
+model Pengaduan {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  judul       String
+  deskripsi   String
+  status      String   @default("PENDING") // PENDING, PROSES, SELESAI
+  tgl_lapor   DateTime @default(now())
+}
+
+enum Role {
+  PELANGGAN
+  KASIR
+  MANAGER
+}
