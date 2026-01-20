@@ -1,6 +1,7 @@
 "use client"
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import toast from 'react-hot-toast'
 
 export default function Register() {
     const [form, setForm] = useState({
@@ -29,14 +30,14 @@ export default function Register() {
             })
             const data = await res.json()
             if (data.status) {
-                alert("Register Berhasil! Silakan Login.")
+                toast.success("Register Berhasil! Silakan Login.")
                 router.push('/login')
             } else {
-                alert("Gagal: " + data.message)
+                toast.error("Gagal: " + data.message)
             }
         } catch (error) {
             console.error(error)
-            alert("Terjadi kesalahan koneksi")
+            toast.error("Terjadi kesalahan koneksi")
         }
     }
 

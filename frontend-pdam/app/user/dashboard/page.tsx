@@ -1,6 +1,7 @@
 "use client"
 import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
+import toast from "react-hot-toast"
 
 // Definisi Struktur Data Tagihan
 interface ITagihan {
@@ -72,7 +73,7 @@ export default function UserDashboard() {
         if (role === "KASIR") {
             // Jika Kasir nyasar ke sini, tendang ke Dashboard Kasir (jika ada) atau Login
             // router.push("/kasir/dashboard") 
-            alert("Anda login sebagai Kasir. Halaman ini khusus Pelanggan.")
+            toast.error("Anda login sebagai Kasir. Halaman ini khusus Pelanggan.")
             router.push("/login")
             return
         }
@@ -86,7 +87,7 @@ export default function UserDashboard() {
     }, [router, ambilData])
 
     const handleUpload = async (id: number) => {
-        if (!selectedFile) return alert("Harap pilih foto bukti transfer terlebih dahulu!")
+        if (!selectedFile) return toast.error("Harap pilih foto bukti transfer terlebih dahulu!")
 
         const formData = new FormData()
         formData.append("image", selectedFile)
@@ -99,16 +100,16 @@ export default function UserDashboard() {
             const data = await res.json()
 
             if (data.status) {
-                alert("Bukti pembayaran berhasil dikirim! Mohon tunggu verifikasi admin.")
+                toast.success("Bukti pembayaran berhasil dikirim! Mohon tunggu verifikasi admin.")
                 setUploadingId(null)
                 setSelectedFile(null)
                 ambilData()
             } else {
-                alert("Gagal upload: " + data.message)
+                toast.error("Gagal upload: " + data.message)
             }
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
-            alert("Terjadi kesalahan koneksi.")
+            toast.error("Terjadi kesalahan koneksi.")
         }
     }
 

@@ -1,6 +1,7 @@
 "use client"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import toast from "react-hot-toast"
 
 interface IPengaduan {
     id: number;
@@ -65,13 +66,13 @@ export default function ManagerInbox() {
             if (data.status) {
                 // 3. Hapus dari layar tanpa reload halaman (UI Optimistic)
                 setMessages(prev => prev.filter(msg => msg.id !== id))
-                alert("Pesan berhasil dihapus.")
+                toast.success("Pesan berhasil dihapus.")
             } else {
-                alert("Gagal menghapus pesan: " + data.message)
+                toast.error("Gagal menghapus pesan: " + data.message)
             }
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
-            alert("Terjadi kesalahan sistem saat menghapus pesan.")
+            toast.error("Terjadi kesalahan sistem saat menghapus pesan.")
         }
     }
 

@@ -1,6 +1,7 @@
 "use client"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import toast from "react-hot-toast"
 
 export default function LoginPage() {
     const [email, setEmail] = useState("")
@@ -19,7 +20,7 @@ export default function LoginPage() {
             const data = await res.json()
 
             if (data.status) {
-                alert("Login Berhasil!")
+                toast.success("Login Berhasil! 🚀");
                 // Simpan token ke localStorage (sementara untuk latihan)
                 localStorage.setItem("token", data.token)
                 localStorage.setItem("role", data.data.role)
@@ -32,11 +33,11 @@ export default function LoginPage() {
                 else if (role === "KASIR") router.push("/kasir/dashboard")
                 else router.push("/user/dashboard")
             } else {
-                alert(data.message)
+                toast.error(data.message)
             }
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
-            alert("Gagal terhubung ke server. Pastikan Backend sudah nyala!")
+            toast.error("Gagal terhubung ke server. Pastikan Backend sudah nyala!")
         }
     }
 

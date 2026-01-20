@@ -25,7 +25,7 @@ export default function ServicesPage() {
 
             <main className="container mx-auto px-6 py-16">
                 <div className="text-center max-w-2xl mx-auto mb-16">
-                    <h1 className="text-4xl md:text-5xl font-black mb-6 text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400">
+                    <h1 className="text-4xl md:text-5xl font-black mb-6 text-transparent bg-clip-text bg-linear-to-r from-sky-400 to-indigo-400">
                         Layanan Unggulan
                     </h1>
                     <p className="text-slate-400 text-lg">Kami hadir memberikan solusi air bersih dengan dukungan teknologi modern untuk kenyamanan Anda.</p>

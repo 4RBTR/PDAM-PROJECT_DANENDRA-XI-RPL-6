@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
+import toast from "react-hot-toast"
 
 interface ITagihanVerifikasi {
     id: number;
@@ -77,15 +78,15 @@ export default function VerifikasiPage() {
             const data = await res.json()
 
             if (data.status) {
-                alert(`Berhasil: ${aksi === 'TERIMA' ? 'Tagihan Lunas' : 'Bukti Ditolak'}`);
+                toast.success(`Berhasil: ${aksi === 'TERIMA' ? 'Tagihan Lunas' : 'Bukti Ditolak'}`);
                 // Hapus item dari list secara langsung (Optimistic UI) agar tidak perlu reload
                 setList(prev => prev.filter(item => item.id !== id))
             } else {
-                alert("Gagal memproses: " + data.message)
+                toast.error("Gagal memproses: " + data.message)
             }
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
-            alert("Terjadi kesalahan koneksi ke server.")
+            toast.error("Terjadi kesalahan koneksi ke server.")
         }
     }
 

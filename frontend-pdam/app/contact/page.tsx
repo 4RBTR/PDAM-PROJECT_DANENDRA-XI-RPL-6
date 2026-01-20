@@ -1,6 +1,7 @@
 "use client"
 import Link from 'next/link'
 import { useState } from 'react'
+import toast from "react-hot-toast";
 
 export default function ContactPage() {
     // State untuk menangampung inputan user
@@ -20,14 +21,14 @@ export default function ContactPage() {
             })
             const data = await res.json()
             if (data.status) {
-                alert("✅ Pesan Anda berhasil dikirim ke Manager!")
+                toast.success("Pesan berhasil dikirim! 🚀");
                 setForm({ nama: "", email: "", pesan: "" }) // Kosongkan form lagi
             } else {
-                alert("❌ Gagal mengirim pesan.")
+                toast.error("Gagal mengirim pesan. Coba lagi nanti.");
             }
         } catch (error) {
             console.error(error)
-            alert("Terjadi kesalahan sistem.")
+            toast.error("Terjadi kesalahan. Silakan coba lagi.");
         }
         setLoading(false)
     }
@@ -49,7 +50,7 @@ export default function ContactPage() {
 
                     {/* Informasi Kontak */}
                     <div>
-                        <h1 className="text-4xl font-black mb-6 text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400">
+                        <h1 className="text-4xl font-black mb-6 text-transparent bg-clip-text bg-linear-to-r from-sky-400 to-indigo-400">
                             Hubungi Kami
                         </h1>
                         <p className="text-slate-400 text-lg mb-8">

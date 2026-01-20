@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import toast from "react-hot-toast"
 
 export default function KasirDashboard() {
     // State untuk form input tagihan
@@ -71,7 +72,7 @@ export default function KasirDashboard() {
 
         // Validasi Sederhana
         if (form.meter_akhir < form.meter_awal) {
-            alert("❌ Error: Meter Akhir tidak boleh lebih kecil dari Meter Awal!")
+            toast.error("Meter akhir tidak boleh kurang dari meter awal.")
             return
         }
 
@@ -89,15 +90,15 @@ export default function KasirDashboard() {
             const data = await res.json()
 
             if (data.status) {
-                alert("✅ Tagihan Berhasil Dibuat!")
+                toast.success("Tagihan Berhasil Dibuat!")
                 // Reset form meteran saja, user/bulan biarkan biar cepat input beruntun
                 setForm({ ...form, meter_awal: 0, meter_akhir: 0 })
             } else {
-                alert("❌ Gagal: " + data.message)
+                toast.error("Gagal: " + data.message)
             }
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
-            alert("Error koneksi server")
+            toast.error("Error koneksi server")
         }
     }
 
@@ -155,7 +156,7 @@ export default function KasirDashboard() {
 
                 {/* --- FORM INPUT TAGIHAN --- */}
                 <div className="bg-white p-8 rounded-3xl shadow-xl max-w-2xl mx-auto border border-gray-100 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-sky-400 to-blue-600"></div>
+                    <div className="absolute top-0 left-0 w-full h-2 bg-linear-to-r from-sky-400 to-blue-600"></div>
 
                     <h3 className="text-2xl font-black text-center mb-8 text-slate-700 tracking-tight">
                         INPUT TAGIHAN BARU

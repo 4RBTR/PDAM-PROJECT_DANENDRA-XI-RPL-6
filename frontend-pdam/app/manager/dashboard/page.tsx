@@ -1,6 +1,7 @@
 "use client"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import toast from "react-hot-toast";
 
 // Definisi Tipe Data (Sesuai output Backend)
 interface IStats {
@@ -52,7 +53,7 @@ export default function ManagerDashboard() {
             // Jika Kasir nyasar ke sini
             if (role === "KASIR") {
                 // router.push("/kasir/dashboard") // Aktifkan jika sudah ada page kasir
-                alert("Akses Ditolak. Halaman ini khusus Manager.")
+                toast.error("Akses Ditolak. Halaman ini khusus Manager.")
                 router.push("/login")
                 return
             }

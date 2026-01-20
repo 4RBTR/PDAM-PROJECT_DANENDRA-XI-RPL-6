@@ -14,7 +14,7 @@ export default function Home() {
       <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-[#0A192F]/80 backdrop-blur-md">
         <div className="container mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-tr from-sky-500 to-indigo-600 rounded-xl flex items-center justify-center font-bold text-white shadow-lg shadow-sky-500/20">P</div>
+            <div className="w-10 h-10 bg-linear-to-tr from-sky-500 to-indigo-600 rounded-xl flex items-center justify-center font-bold text-white shadow-lg shadow-sky-500/20">P</div>
             <span className="font-bold text-xl tracking-tight">PDAM Pintar</span>
           </Link>
           <div className="hidden md:flex gap-8 text-sm font-medium text-slate-300">
@@ -49,7 +49,7 @@ export default function Home() {
         {/* Headline */}
         <h1 className="text-5xl md:text-7xl font-black mb-8 leading-tight tracking-tight animate-fade-in-up">
           Bayar Air Jadi <br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-400 drop-shadow-[0_2px_10px_rgba(56,189,248,0.3)]">
+          <span className="text-transparent bg-clip-text bg-linear-to-r from-sky-400 via-blue-500 to-indigo-400 drop-shadow-[0_2px_10px_rgba(56,189,248,0.3)]">
             Jauh Lebih Mudah.
           </span>
         </h1>
@@ -61,7 +61,7 @@ export default function Home() {
 
         {/* Tombol CTA */}
         <div className="flex flex-col md:flex-row gap-5 w-full md:w-auto mb-20 animate-fade-in-up delay-200">
-          <Link href="/register" className="group bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all shadow-lg shadow-sky-500/30 hover:shadow-sky-500/50 hover:scale-105 flex items-center justify-center gap-3">
+          <Link href="/register" className="group bg-linear-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all shadow-lg shadow-sky-500/30 hover:shadow-sky-500/50 hover:scale-105 flex items-center justify-center gap-3">
             <span>🚀</span> Daftar Sekarang
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 group-hover:translate-x-1 transition">
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
