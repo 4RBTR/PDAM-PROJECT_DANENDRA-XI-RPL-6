@@ -283,7 +283,15 @@ app.delete('/manager/pengaduan/:id', async (req, res) => {
     }
 });
 
-// Ganti baris app.listen yang lama dengan ini:
-app.listen(8000, '0.0.0.0', () => {
-    console.log("🚀 Server PDAM Siap di Port 8000 dan bisa diakses HP");
-});
+// GANTI BAGIAN PALING BAWAH INDEX.JS DENGAN INI:
+
+// Export app untuk Vercel (Wajib serverless)
+module.exports = app;
+
+// Hanya jalankan app.listen kalau BUKAN di Vercel (untuk tes lokal di laptop)
+if (!process.env.VERCEL) {
+    const PORT = process.env.PORT || 8000;
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`🚀 Server PDAM jalan di port ${PORT}`);
+    });
+}
