@@ -4,7 +4,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import toast from "react-hot-toast" // Pastikan ini sudah terinstall
+import toast from "react-hot-toast"
 import { getAuthToken, getUserRole, getUserId, getUserName, removeAuthToken } from "@/utils/cookies"
 
 // --- INTERFACES ---
@@ -19,6 +19,10 @@ interface IPengaduan {
 }
 
 export default function UserPengaduan() {
+    // 0. SETUP ENV URL
+    // Mengambil URL dari file .env (Next.js otomatis membaca NEXT_PUBLIC_*)
+    const API_URL = process.env.NEXT_PUBLIC_API_URL
+
     // 1. STATE
     const [riwayat, setRiwayat] = useState<IPengaduan[]>([])
 
@@ -39,7 +43,8 @@ export default function UserPengaduan() {
         if (!id || !token) return
 
         try {
-            const res = await fetch(`http://localhost:8000/pengaduan/user/${id}`, {
+            // UPDATED: Menggunakan API_URL
+            const res = await fetch(`${API_URL}/pengaduan/user/${id}`, {
                 headers: { "Authorization": `Bearer ${token}` }
             })
             const data = await res.json()
@@ -49,8 +54,9 @@ export default function UserPengaduan() {
             }
         } catch (error) {
             console.error("Gagal ambil history pengaduan", error)
+            toast.error("Gagal terhubung ke server")
         }
-    }, [])
+    }, [API_URL]) // Dependency ditambahkan
 
     // 3. CEK AUTH
     useEffect(() => {
@@ -88,7 +94,8 @@ export default function UserPengaduan() {
         }
 
         try {
-            const res = await fetch(`http://localhost:8000/pengaduan`, {
+            // UPDATED: Menggunakan API_URL
+            const res = await fetch(`${API_URL}/pengaduan`, {
                 method: 'POST',
                 headers: { "Authorization": `Bearer ${token}` },
                 body: formData
@@ -112,25 +119,25 @@ export default function UserPengaduan() {
     }
 
     // ---------------------------------------------------------
-    // 5. HANDLE HAPUS (DIPERBAIKI: MENGGUNAKAN CUSTOM TOAST)
+    // 5. HANDLE HAPUS
     // ---------------------------------------------------------
 
-    // Fungsi A: Menjalankan penghapusan (Dieksekusi jika user klik YA)
+    // Fungsi A: Menjalankan penghapusan
     const executeHapus = async (id: number) => {
         const token = getAuthToken()
-        const loadingToast = toast.loading("Sedang menghapus..."); // Tampilkan loading
+        const loadingToast = toast.loading("Sedang menghapus...");
 
         try {
-            const res = await fetch(`http://localhost:8000/pengaduan/${id}`, {
+            // UPDATED: Menggunakan API_URL
+            const res = await fetch(`${API_URL}/pengaduan/${id}`, {
                 method: "DELETE",
                 headers: { "Authorization": `Bearer ${token}` }
             })
             const data = await res.json()
 
             if (data.status) {
-                // Hapus toast loading, ganti dengan success
                 toast.success("Laporan berhasil dihapus", { id: loadingToast })
-                ambilData() // Refresh data
+                ambilData() 
             } else {
                 toast.error(data.message || "Gagal menghapus", { id: loadingToast })
             }
@@ -157,8 +164,8 @@ export default function UserPengaduan() {
                     </button>
                     <button
                         onClick={() => {
-                            toast.dismiss(t.id) // Tutup konfirmasi
-                            executeHapus(id) // Jalankan hapus
+                            toast.dismiss(t.id)
+                            executeHapus(id)
                         }}
                         className="flex-1 bg-red-500 text-white text-xs py-2.5 px-3 rounded-lg hover:bg-red-600 transition font-bold shadow-red-200 shadow-md"
                     >
@@ -167,8 +174,8 @@ export default function UserPengaduan() {
                 </div>
             </div>
         ), {
-            duration: 5000, // Durasi lebih lama agar user sempat baca
-            position: 'top-center', // Posisi di tengah atas agar terlihat jelas
+            duration: 5000,
+            position: 'top-center',
             style: {
                 background: '#fff',
                 borderRadius: '1rem',
@@ -177,7 +184,6 @@ export default function UserPengaduan() {
             }
         })
     }
-    // ---------------------------------------------------------
 
     const handleLogout = () => {
         removeAuthToken()
@@ -304,7 +310,7 @@ export default function UserPengaduan() {
                                         {/* Bagian Text */}
                                         <div className="flex-1 order-2 md:order-1 flex flex-col h-full">
 
-                                            {/* Header Kartu: Tanggal, Status, dan Tombol Hapus */}
+                                            {/* Header Kartu */}
                                             <div className="flex items-center gap-2 mb-2 flex-wrap">
                                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                                                     {new Date(item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -354,14 +360,16 @@ export default function UserPengaduan() {
                                         {item.foto && (
                                             <div className="md:w-32 h-32 shrink-0 order-1 md:order-2">
                                                 <div className="w-full h-full rounded-xl overflow-hidden border border-slate-200 relative group">
+                                                    {/* UPDATED: Menggunakan API_URL untuk Source Gambar */}
                                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                                     <img
-                                                        src={`http://localhost:8000/uploads/${item.foto}`}
+                                                        src={`${API_URL}/uploads/${item.foto}`}
                                                         alt="Bukti"
                                                         className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
                                                     />
+                                                    {/* UPDATED: Menggunakan API_URL untuk Link Gambar */}
                                                     <a
-                                                        href={`http://localhost:8000/uploads/${item.foto}`}
+                                                        href={`${API_URL}/uploads/${item.foto}`}
                                                         target="_blank"
                                                         rel="noreferrer"
                                                         className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold"

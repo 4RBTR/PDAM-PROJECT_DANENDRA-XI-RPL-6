@@ -61,7 +61,7 @@ export default function Home() {
         {/* Mobile Dropdown Menu */}
         {isMobileMenuOpen && (
           <div className="absolute top-16 left-0 w-full bg-white border-b border-slate-200 shadow-xl p-6 flex flex-col gap-4 md:hidden animate-in slide-in-from-top-5 duration-200">
-            {['about', 'services', 'caontact'].map((item) => (
+            {['about', 'services', 'contact'].map((item) => (
               <Link key={item} href={`/${item.toLowerCase()}`} className="text-lg font-medium text-slate-600 py-2 border-b border-slate-50" onClick={() => setIsMobileMenuOpen(false)}>
                 {item}
               </Link>

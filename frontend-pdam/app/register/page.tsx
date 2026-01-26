@@ -5,6 +5,11 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 
+// ==========================================
+// 👇 KONFIGURASI API (MENGGUNAKAN ENV)
+// ==========================================
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
+
 export default function RegisterPage() {
     const [form, setForm] = useState({
         name: '',
@@ -24,13 +29,11 @@ export default function RegisterPage() {
         e.preventDefault()
 
         // 🛡️ VALIDASI MANUAL (PENJAGAAN KETAT)
-        // Kita cek satu per satu, kalau ada yang kosong, stop prosesnya!
         if (!form.name || !form.email || !form.password || !form.address) {
             toast.error("Mohon lengkapi semua data!")
-            return // ⛔ Stop, jangan lanjut ke bawah
+            return
         }
 
-        // Cek panjang password minimal (Opsional, biar makin aman)
         if (form.password.length < 3) {
             toast.error("Password minimal 3 karakter")
             return
@@ -39,7 +42,8 @@ export default function RegisterPage() {
         setLoading(true)
 
         try {
-            const res = await fetch('http://localhost:8000/user', {
+            // 👇 UPDATE: Gunakan API_BASE_URL
+            const res = await fetch(`${API_BASE_URL}/user`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ...form, role: "PELANGGAN" })

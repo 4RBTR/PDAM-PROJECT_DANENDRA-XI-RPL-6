@@ -21,15 +21,19 @@ import {
 // 👇 Import Helper Cookies
 import { getAuthToken, getUserRole } from "@/utils/cookies"
 
+// ==========================================
+// 👇 KONFIGURASI API (MENGGUNAKAN ENV)
+// ==========================================
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
+
 // --- INTERFACE UPDATE ---
-// Menambahkan field 'tanggapan' agar manager bisa melihat reply sebelumnya
 interface IPengaduan {
     id: number;
     nama: string;
     email: string;
     judul?: string;
     pesan: string;
-    tanggapan?: string | null; // 👇 Field baru untuk balasan manager
+    tanggapan?: string | null;
     foto?: string | null;
     status?: string;
     userId?: number | null;
@@ -80,6 +84,7 @@ export default function ManagerInbox() {
         const role = getUserRole()
         if (role !== "MANAGER") {
             // Handle redirect logic here
+            // router.push("/login") 
         }
         fetchMessages()
     }, [])
@@ -88,7 +93,8 @@ export default function ManagerInbox() {
         setLoading(true)
         try {
             const token = getAuthToken();
-            const res = await fetch("http://localhost:8000/manager/pengaduan", {
+
+            const res = await fetch(`${API_BASE_URL}/manager/pengaduan`, {
                 headers: { "Authorization": `Bearer ${token}` }
             })
             const data = await res.json()
@@ -101,7 +107,7 @@ export default function ManagerInbox() {
                     email: item.user ? item.user.email : item.email,
                     judul: item.judul || "Pesan Umum",
                     pesan: item.deskripsi || item.pesan,
-                    tanggapan: item.tanggapan, // Ambil tanggapan dari DB
+                    tanggapan: item.tanggapan,
                     foto: item.foto,
                     status: item.status || "PENDING",
                     userId: item.userId,
@@ -136,7 +142,7 @@ export default function ManagerInbox() {
     const executeDelete = async (id: number) => {
         const token = getAuthToken();
         try {
-            const res = await fetch(`http://localhost:8000/manager/pengaduan/${id}`, {
+            const res = await fetch(`${API_BASE_URL}/manager/pengaduan/${id}`, {
                 method: 'DELETE',
                 headers: { "Authorization": `Bearer ${token}` }
             })
@@ -156,7 +162,7 @@ export default function ManagerInbox() {
     // --- Logic 2: REPLY (Update Status & Add Response) ---
     const openReplyModal = (msg: IPengaduan) => {
         setSelectedMessage(msg)
-        setReplyText(msg.tanggapan || "") // Jika sudah ada tanggapan sebelumnya, tampilkan
+        setReplyText(msg.tanggapan || "")
         setIsReplyModalOpen(true)
     }
 
@@ -167,16 +173,14 @@ export default function ManagerInbox() {
         const token = getAuthToken();
 
         try {
-            // Asumsi Endpoint: PUT /manager/pengaduan/:id
-            // Body: { status: "SELESAI", tanggapan: "..." }
-            const res = await fetch(`http://localhost:8000/manager/pengaduan/${selectedMessage.id}`, {
-                method: 'PUT', // Atau PATCH tergantung backend
+            const res = await fetch(`${API_BASE_URL}/manager/pengaduan/${selectedMessage.id}`, {
+                method: 'PUT',
                 headers: {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${token}`
                 },
                 body: JSON.stringify({
-                    status: "SELESAI", // Update status jadi SELESAI agar user tahu
+                    status: "SELESAI",
                     tanggapan: replyText
                 })
             })
@@ -290,11 +294,10 @@ export default function ManagerInbox() {
                                             {/* ACTION BUTTONS */}
                                             <div className="flex items-center gap-2">
                                                 {msg.foto && (
-                                                    <a href={`http://localhost:8000/uploads/${msg.foto}`} target="_blank" rel="noreferrer" className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg">
+                                                    <a href={`${API_BASE_URL}/uploads/${msg.foto}`} target="_blank" rel="noreferrer" className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg">
                                                         <ImageIcon size={18} />
                                                     </a>
                                                 )}
-                                                {/* Tampilkan Tombol Hapus HANYA jika bukan user verified, atau jika sudah selesai */}
                                                 <button onClick={() => executeDelete(msg.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition" title="Hapus Permanen">
                                                     <Trash2 size={18} />
                                                 </button>

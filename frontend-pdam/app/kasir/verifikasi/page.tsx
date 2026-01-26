@@ -4,8 +4,6 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import toast from "react-hot-toast"
-
-// 👇 1. Import Helper Cookies
 import { getAuthToken, getUserRole } from "@/utils/cookies"
 
 interface ITagihanVerifikasi {
@@ -19,14 +17,23 @@ interface ITagihanVerifikasi {
 }
 
 export default function VerifikasiPage() {
+    // 👇 Menggunakan ENV Variable agar konsisten dengan file lain
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+
     const [list, setList] = useState<ITagihanVerifikasi[]>([])
     const [loading, setLoading] = useState(true)
     const router = useRouter()
 
+    // --- STATE UNTUK MODAL & PROSES ---
+    const [isModalOpen, setIsModalOpen] = useState(false)
+    const [processing, setProcessing] = useState(false)
+    const [selectedItem, setSelectedItem] = useState<ITagihanVerifikasi | null>(null)
+    const [actionType, setActionType] = useState<'TERIMA' | 'TOLAK' | null>(null)
+    const [catatan, setCatatan] = useState("") 
+
     useEffect(() => {
-        // --- 2. PROTEKSI HALAMAN VIA COOKIES ---
-        const token = getAuthToken() // ✅ Ambil dari Cookie
-        const role = getUserRole()   // ✅ Ambil dari Cookie
+        const token = getAuthToken()
+        const role = getUserRole()
 
         if (!token) {
             router.push("/login")
@@ -34,7 +41,6 @@ export default function VerifikasiPage() {
         }
 
         if (role !== "KASIR") {
-            // Redirect jika bukan kasir
             router.push("/login")
             return
         }
@@ -45,12 +51,11 @@ export default function VerifikasiPage() {
 
     const loadData = async () => {
         try {
-            // ✅ Ambil token terbaru
-            const token = getAuthToken() 
-
-            const res = await fetch('http://localhost:8000/tagihan/verifikasi/list', {
-                headers: {
-                    "Authorization": `Bearer ${token}` // ✅ Header Auth
+            const token = getAuthToken()
+            // 👇 Fetch menggunakan API_URL dari env
+            const res = await fetch(`${API_URL}/tagihan/verifikasi/list`, {
+                headers: { 
+                    "Authorization": `Bearer ${token}` 
                 }
             })
             const data = await res.json()
@@ -65,37 +70,60 @@ export default function VerifikasiPage() {
         }
     }
 
-    const proses = async (id: number, aksi: string) => {
-        const pesan = aksi === 'TERIMA'
-            ? "Apakah Anda yakin BUKTI INI VALID dan ingin melunaskan tagihan?"
-            : "Apakah Anda yakin ingin MENOLAK bukti pembayaran ini?";
+    // --- LOGIKA MODAL ---
+    const openConfirmModal = (item: ITagihanVerifikasi, type: 'TERIMA' | 'TOLAK') => {
+        setSelectedItem(item)
+        setActionType(type)
+        setCatatan("") 
+        setIsModalOpen(true)
+    }
 
-        if (!confirm(pesan)) return;
+    const closeModal = () => {
+        setIsModalOpen(false)
+        setSelectedItem(null)
+        setActionType(null)
+        setProcessing(false)
+    }
 
-        // ✅ Ambil token sebelum request
+    // --- PROSES API ---
+    const handleProcess = async () => {
+        if (!selectedItem || !actionType) return;
+
+        if (actionType === 'TOLAK' && catatan.trim().length < 5) {
+             toast("Mohon isi alasan penolakan (minimal 5 karakter)", { icon: "✍️" });
+             return;
+        }
+
+        setProcessing(true)
         const token = getAuthToken()
 
         try {
-            const res = await fetch(`http://localhost:8000/tagihan/verifikasi/${id}`, {
+            // 👇 Request PUT ke endpoint API
+            const res = await fetch(`${API_URL}/tagihan/verifikasi/${selectedItem.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}` // ✅ Header Auth
+                    'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ aksi })
+                body: JSON.stringify({ 
+                    aksi: actionType,
+                    catatan: catatan 
+                })
             })
             const data = await res.json()
 
             if (data.status) {
-                toast.success(`Berhasil: ${aksi === 'TERIMA' ? 'Tagihan Lunas' : 'Bukti Ditolak'}`);
-                // Hapus item dari list secara langsung (Optimistic UI) agar tidak perlu reload
-                setList(prev => prev.filter(item => item.id !== id))
+                toast.success(`Berhasil: ${actionType === 'TERIMA' ? 'Tagihan Lunas' : 'Bukti Ditolak'}`);
+                setList(prev => prev.filter(item => item.id !== selectedItem.id))
+                closeModal()
             } else {
-                toast.error("Gagal memproses: " + data.message)
+                toast.error("Gagal: " + data.message)
             }
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
-            toast.error("Terjadi kesalahan koneksi ke server.")
+            toast.error("Terjadi kesalahan koneksi.")
+            console.error(error)
+        } finally {
+            setProcessing(false)
         }
     }
 
@@ -107,7 +135,7 @@ export default function VerifikasiPage() {
                     <h1 className="text-3xl font-black text-sky-800 flex items-center gap-2">
                         <span>🔍</span> VERIFIKASI PEMBAYARAN
                     </h1>
-                    <p className="text-slate-500 mt-1">Cek keaslian bukti transfer pelanggan sebelum validasi.</p>
+                    <p className="text-slate-500 mt-1">Validasi bukti transfer pelanggan.</p>
                 </div>
                 <button
                     onClick={() => router.push('/kasir/dashboard')}
@@ -117,11 +145,11 @@ export default function VerifikasiPage() {
                 </button>
             </div>
 
-            {/* Content */}
+            {/* Content List */}
             {loading ? (
                 <div className="flex flex-col items-center justify-center py-20">
                     <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-sky-600 mb-4"></div>
-                    <p className="text-slate-400">Memuat data pembayaran...</p>
+                    <p className="text-slate-400">Memuat data...</p>
                 </div>
             ) : (
                 <div className="grid gap-6">
@@ -129,39 +157,39 @@ export default function VerifikasiPage() {
                         <div className="bg-white p-16 text-center rounded-3xl border-2 border-dashed border-slate-200">
                             <p className="text-6xl mb-4">📂</p>
                             <h3 className="text-xl font-bold text-slate-600">Semua Bersih!</h3>
-                            <p className="text-slate-400">Tidak ada pembayaran yang menunggu verifikasi saat ini.</p>
+                            <p className="text-slate-400">Tidak ada pembayaran menunggu verifikasi.</p>
                         </div>
                     )}
 
                     {list.map((item) => (
                         <div key={item.id} className="bg-white p-6 rounded-2xl shadow-md border border-slate-100 flex flex-col md:flex-row gap-8 hover:shadow-lg transition duration-300">
-
-                            {/* Kolom Kiri: Gambar Bukti */}
+                            
+                            {/* Kiri: Bukti Bayar */}
                             <div className="w-full md:w-1/3">
                                 <p className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
                                     <span>📷</span> Bukti Transfer
                                 </p>
                                 <div className="bg-slate-100 p-2 rounded-xl border border-slate-200 group relative">
-                                    {/* Link untuk membuka gambar full size */}
-                                    <a href={`http://localhost:8000/uploads/${item.bukti_bayar}`} target="_blank" rel="noreferrer" className="block relative overflow-hidden rounded-lg">
+                                    {/* 👇 Menggunakan API_URL untuk path gambar */}
+                                    <a href={`${API_URL}/uploads/${item.bukti_bayar}`} target="_blank" rel="noreferrer" className="block relative overflow-hidden rounded-lg">
                                         <Image
-                                            src={`http://localhost:8000/uploads/${item.bukti_bayar}`}
+                                            src={`${API_URL}/uploads/${item.bukti_bayar}`}
                                             alt="Bukti Bayar"
                                             width={400}
                                             height={300}
                                             className="w-full h-56 object-cover transform group-hover:scale-105 transition duration-500 cursor-zoom-in"
-                                            unoptimized={true} // Penting jika load dari localhost/backend langsung
+                                            unoptimized={true} 
                                         />
                                         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition duration-300 flex items-center justify-center">
                                             <span className="text-white opacity-0 group-hover:opacity-100 font-bold bg-black/50 px-3 py-1 rounded-full text-xs backdrop-blur-sm">
-                                                Klik untuk memperbesar
+                                                Lihat Asli
                                             </span>
                                         </div>
                                     </a>
                                 </div>
                             </div>
 
-                            {/* Kolom Kanan: Informasi & Aksi */}
+                            {/* Kanan: Info & Aksi */}
                             <div className="w-full md:w-2/3 flex flex-col justify-between">
                                 <div>
                                     <div className="flex justify-between items-start border-b border-slate-100 pb-4 mb-4">
@@ -180,15 +208,14 @@ export default function VerifikasiPage() {
                                     </div>
 
                                     <div className="bg-sky-50 p-5 rounded-xl border border-sky-100 flex items-center justify-between">
-                                        <span className="text-sm font-semibold text-sky-800">Total Nominal Transfer:</span>
+                                        <span className="text-sm font-semibold text-sky-800">Total Nominal:</span>
                                         <span className="text-3xl font-black text-sky-700">Rp {item.total_bayar.toLocaleString('id-ID')}</span>
                                     </div>
                                 </div>
 
-                                {/* Tombol Aksi */}
                                 <div className="flex gap-4 mt-6">
                                     <button
-                                        onClick={() => proses(item.id, 'TERIMA')}
+                                        onClick={() => openConfirmModal(item, 'TERIMA')}
                                         className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-emerald-200 transition transform active:scale-95 flex justify-center items-center gap-2"
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -198,7 +225,7 @@ export default function VerifikasiPage() {
                                     </button>
 
                                     <button
-                                        onClick={() => proses(item.id, 'TOLAK')}
+                                        onClick={() => openConfirmModal(item, 'TOLAK')}
                                         className="flex-1 bg-white border-2 border-red-100 text-red-500 hover:bg-red-50 hover:border-red-200 py-3.5 rounded-xl font-bold transition transform active:scale-95 flex justify-center items-center gap-2"
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -210,6 +237,72 @@ export default function VerifikasiPage() {
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* --- MODAL CONFIRMATION (POPUP) --- */}
+            {isModalOpen && selectedItem && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 transform scale-100 transition-all">
+                        
+                        <div className="text-center mb-6">
+                            <div className={`mx-auto flex items-center justify-center h-16 w-16 rounded-full mb-4 ${actionType === 'TERIMA' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                                {actionType === 'TERIMA' ? (
+                                    <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                ) : (
+                                    <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                )}
+                            </div>
+                            <h3 className="text-xl font-black text-slate-800">
+                                {actionType === 'TERIMA' ? 'Konfirmasi Pelunasan' : 'Tolak Bukti Bayar'}
+                            </h3>
+                            <p className="text-slate-500 mt-2 text-sm">
+                                {actionType === 'TERIMA' 
+                                    ? `Pastikan dana Rp ${selectedItem.total_bayar.toLocaleString()} sudah masuk ke rekening.` 
+                                    : `Anda akan menolak bukti dari ${selectedItem.userName}.`
+                                }
+                            </p>
+                        </div>
+
+                        {/* Input Alasan Jika Tolak */}
+                        {actionType === 'TOLAK' && (
+                            <div className="mb-6">
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Alasan Penolakan <span className="text-red-500">*</span></label>
+                                <textarea
+                                    value={catatan}
+                                    onChange={(e) => setCatatan(e.target.value)}
+                                    placeholder="Contoh: Foto buram, Nominal kurang, dll..."
+                                    className="w-full border border-slate-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm h-24 resize-none"
+                                ></textarea>
+                            </div>
+                        )}
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={closeModal}
+                                disabled={processing}
+                                className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                onClick={handleProcess}
+                                disabled={processing}
+                                className={`flex-1 py-3 px-4 text-white font-bold rounded-xl transition flex justify-center items-center gap-2 ${
+                                    actionType === 'TERIMA' 
+                                    ? 'bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-200' 
+                                    : 'bg-red-500 hover:bg-red-600 shadow-lg shadow-red-200'
+                                }`}
+                            >
+                                {processing ? 'Memproses...' : (actionType === 'TERIMA' ? 'Ya, Valid' : 'Tolak')}
+                            </button>
+                        </div>
+
+                    </div>
                 </div>
             )}
         </div>

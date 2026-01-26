@@ -27,6 +27,9 @@ export default function KasirDashboard() {
 
     const router = useRouter()
 
+    // 👇 Helper untuk mengambil Base URL API dari .env.local
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+
     useEffect(() => {
         // PERBAIKAN 1: Bersihkan semua toast/notifikasi sisa dari halaman login
         toast.dismiss()
@@ -56,10 +59,12 @@ export default function KasirDashboard() {
         const fetchPelanggan = async () => {
             try {
                 const currentToken = getAuthToken();
-                // Pastikan URL backend benar (localhost:8000 atau sesuai settingan)
-                const res = await fetch('http://localhost:8000/users/pelanggan', {
+
+                // 👇 PERBAIKAN: Gunakan API_URL dari env, bukan localhost hardcoded
+                const res = await fetch(`${API_URL}/users/pelanggan`, {
                     headers: { "Authorization": `Bearer ${currentToken}` }
                 })
+
                 const data = await res.json()
                 if (data.status) setPelanggan(data.data)
             } catch (error) {
@@ -68,7 +73,7 @@ export default function KasirDashboard() {
             }
         }
         fetchPelanggan()
-    }, [router])
+    }, [router, API_URL])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -87,7 +92,8 @@ export default function KasirDashboard() {
         const loadingToast = toast.loading("Menyimpan data...")
 
         try {
-            const res = await fetch('http://localhost:8000/tagihan', {
+            // 👇 PERBAIKAN: Gunakan API_URL dari env
+            const res = await fetch(`${API_URL}/tagihan`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -461,34 +467,24 @@ export default function KasirDashboard() {
                                                 </td>
 
                                                 {/* Kolom Nama */}
-                                                <td className="px-6 py-4 font-medium text-gray-900">
+                                                <td className="px-6 py-4 font-bold text-slate-700">
                                                     {customer.name}
                                                 </td>
 
                                                 {/* Kolom Email */}
-                                                <td className="px-6 py-4">
+                                                <td className="px-6 py-4 text-blue-600">
                                                     {customer.email}
                                                 </td>
 
-                                                {/* Kolom Alamat (Pastikan field ini ada di database) */}
-                                                <td className="px-6 py-4">
-                                                    {/* Jika alamat kosong, tampilkan tanda strip atau pesan */}
-                                                    {customer.address ? customer.address : "-"}
+                                                {/* Kolom Alamat (jika ada) */}
+                                                <td className="px-6 py-4 text-slate-500">
+                                                    {customer.alamat || "-"}
                                                 </td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
                             )}
-                        </div>
-
-                        <div className="p-4 bg-slate-50 border-t border-slate-100 text-center">
-                            <button
-                                onClick={() => setShowModalPelanggan(false)}
-                                className="text-sm text-slate-500 hover:text-blue-600 font-medium"
-                            >
-                                Tutup Jendela
-                            </button>
                         </div>
                     </div>
                 </div>

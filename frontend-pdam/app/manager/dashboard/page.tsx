@@ -31,6 +31,10 @@ import {
 // 👇 Import Helper
 import { getAuthToken, getUserRole, removeAuthToken } from "@/utils/cookies"
 
+// --- KONFIGURASI API (Ganti IP di sini agar sesuai) ---
+const API_URL = process.env.NEXT_PUBLIC_API_URL
+// Jika testing via HP/Jaringan lain, ganti localhost dengan IP Laptop, misal: "http://192.168.1.5:8000"
+
 // --- Tipe Data ---
 interface IStats {
     total_pendapatan: number;
@@ -102,7 +106,8 @@ export default function ManagerDashboard() {
     const fetchData = async () => {
         try {
             const token = getAuthToken()
-            const res = await fetch("http://localhost:8000/manager/dashboard", {
+            // 👇 MENGGUNAKAN API_URL AGAR DINAMIS
+            const res = await fetch(`${API_URL}/manager/dashboard`, {
                 headers: { "Authorization": `Bearer ${token}` }
             })
 
@@ -283,7 +288,7 @@ export default function ManagerDashboard() {
                             <p className="text-sm text-slate-500">Analisa pemasukan 5 bulan terakhir.</p>
                         </div>
                         <div className="h-62.5 w-full">
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height={250}>
                                 <AreaChart data={chartData}>
                                     <defs>
                                         <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">

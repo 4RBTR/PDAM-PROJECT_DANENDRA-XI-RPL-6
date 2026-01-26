@@ -18,7 +18,17 @@ export default function LoginPage() {
         setLoading(true)
 
         try {
-            const res = await fetch("http://localhost:8000/user/login", {
+            // 1. Ambil URL dari file .env.local
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL
+
+            // Cek apakah URL sudah disetting
+            if (!baseUrl) {
+                toast.error("URL Backend belum disetting di .env.local")
+                setLoading(false)
+                return
+            }
+
+            const res = await fetch(`${baseUrl}/user/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, password })
@@ -51,7 +61,7 @@ export default function LoginPage() {
 
         } catch (error) {
             console.error("Login Error:", error)
-            toast.error("Gagal terhubung ke server")
+            toast.error("Gagal terhubung ke server. Cek IP di .env.local")
         } finally {
             setLoading(false)
         }

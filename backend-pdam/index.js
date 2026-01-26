@@ -11,10 +11,19 @@ const app = express();
 const prisma = new PrismaClient();
 const SECRET = "pdam_super_secret_123";
 
-app.use(cors());
+// ==========================================
+// 🔴 PENGATURAN KONEKSI (CORS) - PENTING!
+// ==========================================
+// Kita izinkan SEMUA alamat (*) supaya Frontend di HP/Laptop lain bisa masuk.
+app.use(cors({
+    origin: '*', 
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json()); // Penting untuk membaca JSON body
 
-// Buka akses folder 'uploads'
+// Buka akses folder 'uploads' agar gambar bisa dilihat di Frontend
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // --- SETUP UPLOAD GAMBAR (MULTER) ---
@@ -226,29 +235,24 @@ app.get('/manager/dashboard', async (req, res) => {
 
 
 // ==========================================
-// 4. FITUR PENGADUAN (Fixed: Soft Delete & Guest)
+// 4. FITUR PENGADUAN
 // ==========================================
 
-// --- FIX: ROUTE KHUSUS KONTAK TAMU (Tanpa Gambar/Multer) ---
-// Ini untuk mengatasi bug "Unexpected token <" di halaman Contact
+// KONTAK TAMU
 app.post('/contact', async (req, res) => {
     try {
-        const { nama, email, pesan } = req.body; // Menerima JSON
-
+        const { nama, email, pesan } = req.body;
         if (!nama || !email || !pesan) {
             return res.status(400).json({ status: false, message: "Data tidak lengkap" });
         }
 
         const data = await prisma.pengaduan.create({
             data: {
-                userId: null,           // Tamu tidak punya User ID
-                nama: nama,             // Simpan nama tamu
-                email: email,           // Simpan email tamu
-
-                // --- BAGIAN INI YANG MEMPERBAIKI ERROR ANDA ---
-                judul: `Pesan Tamu: ${nama}`,  // Auto-generate Judul
-                deskripsi: pesan,              // Petakan 'pesan' ke 'deskripsi'
-
+                userId: null,
+                nama: nama,
+                email: email,
+                judul: `Pesan Tamu: ${nama}`,
+                deskripsi: pesan,
                 status: "PENDING",
                 isRead: false,
                 isDeletedByUser: false
@@ -289,15 +293,14 @@ app.post('/pengaduan', upload.single('image'), async (req, res) => {
     }
 });
 
-// PELANGGAN: Lihat Riwayat Pengaduan Saya
-// --- FIX: Filter Soft Delete ---
+// PELANGGAN: Riwayat Pengaduan
 app.get('/pengaduan/user/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const list = await prisma.pengaduan.findMany({
             where: {
                 userId: parseInt(id),
-                isDeletedByUser: false // HANYA TAMPILKAN YANG BELUM DIHAPUS USER
+                isDeletedByUser: false
             },
             orderBy: { createdAt: 'desc' }
         });
@@ -307,28 +310,23 @@ app.get('/pengaduan/user/:id', async (req, res) => {
     }
 });
 
-// PELANGGAN: Hapus Pengaduan Saya (SOFT DELETE)
-// --- FIX: Gunakan Update, bukan Delete ---
+// PELANGGAN: Hapus (Soft Delete)
 app.delete('/pengaduan/:id', async (req, res) => {
     try {
         const { id } = req.params;
-
-        // Ubah status isDeletedByUser menjadi TRUE (Soft Delete)
         await prisma.pengaduan.update({
             where: { id: parseInt(id) },
             data: { isDeletedByUser: true }
         });
-
         res.json({ status: true, message: "Laporan berhasil dihapus dari riwayat" });
     } catch (error) {
         res.status(500).json({ status: false, message: "Gagal menghapus laporan" });
     }
 });
 
-// MANAGER: Lihat Semua Pengaduan Masuk
+// MANAGER: Lihat Semua Pengaduan
 app.get('/manager/pengaduan', async (req, res) => {
     try {
-        // Manager melihat SEMUA pesan (termasuk yang isDeletedByUser: true)
         const list = await prisma.pengaduan.findMany({
             include: { user: true },
             orderBy: { createdAt: 'desc' }
@@ -345,35 +343,26 @@ app.get('/manager/pengaduan', async (req, res) => {
     }
 });
 
-// MANAGER: Balas & Update Status
+// MANAGER: Balas
 app.put('/manager/pengaduan/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { status, tanggapan } = req.body;
-
         await prisma.pengaduan.update({
             where: { id: parseInt(id) },
-            data: {
-                status: status,
-                tanggapan: tanggapan
-            }
+            data: { status, tanggapan }
         });
-
         res.json({ status: true, message: "Status & Tanggapan diperbarui" });
     } catch (error) {
-        console.error(error);
         res.status(500).json({ status: false, message: "Gagal update" });
     }
 });
 
-// MANAGER: Hapus Pengaduan (HARD DELETE)
-// Manager boleh menghapus permanen
+// MANAGER: Hapus Permanen
 app.delete('/manager/pengaduan/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        await prisma.pengaduan.delete({
-            where: { id: parseInt(id) }
-        });
+        await prisma.pengaduan.delete({ where: { id: parseInt(id) } });
         res.json({ status: true, message: "Pesan berhasil dihapus permanen" });
     } catch (error) {
         res.status(500).json({ status: false, message: "Gagal menghapus pesan" });
@@ -389,7 +378,8 @@ module.exports = app;
 
 if (!process.env.VERCEL) {
     const PORT = process.env.PORT || 8000;
+    // 🔴 PENTING: Listen ke '0.0.0.0' supaya bisa diakses dari jaringan (IP) lain
     app.listen(PORT, '0.0.0.0', () => {
-        console.log(`🚀 Server PDAM jalan di port ${PORT}`);
+        console.log(`🚀 Server PDAM jalan di port ${PORT} dan terbuka untuk semua IP`);
     });
 }

@@ -8,6 +8,11 @@ import toast from "react-hot-toast"
 // 👇 Helper Cookies
 import { getAuthToken, getUserRole, getUserId, getUserName, removeAuthToken } from "@/utils/cookies"
 
+// ==========================================
+// 👇 KONFIGURASI API (MENGGUNAKAN ENV)
+// ==========================================
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 // --- INTERFACES ---
 interface ITagihan {
     id: number;
@@ -45,13 +50,15 @@ export default function UserDashboard() {
         if (!id || !token) return
 
         try {
-            const resT = await fetch(`http://localhost:8000/tagihan/${id}`, {
+            // 👇 UPDATE: Gunakan API_BASE_URL
+            const resT = await fetch(`${API_BASE_URL}/tagihan/${id}`, {
                 headers: { "Authorization": `Bearer ${token}` }
             })
             const dataT = await resT.json()
             if (dataT.status) setTagihan(dataT.data)
 
-            const resP = await fetch(`http://localhost:8000/user/${id}`, {
+            // 👇 UPDATE: Gunakan API_BASE_URL
+            const resP = await fetch(`${API_BASE_URL}/user/${id}`, {
                 headers: { "Authorization": `Bearer ${token}` }
             })
             const dataP = await resP.json()
@@ -102,7 +109,8 @@ export default function UserDashboard() {
         const loadingToast = toast.loading("Mengirim bukti...")
 
         try {
-            const res = await fetch(`http://localhost:8000/tagihan/upload/${id}`, {
+            // 👇 UPDATE: Gunakan API_BASE_URL
+            const res = await fetch(`${API_BASE_URL}/tagihan/upload/${id}`, {
                 method: 'POST',
                 headers: { "Authorization": `Bearer ${token}` },
                 body: formData
