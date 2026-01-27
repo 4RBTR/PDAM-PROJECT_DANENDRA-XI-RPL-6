@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import toast, { Toaster } from "react-hot-toast"
+import SidebarUser from "@/components/Kasir/SidebarKasir"
 
 // 👇 1. Import Helper Cookies
 import { getAuthToken, getUserRole } from "@/utils/cookies"
@@ -17,6 +18,18 @@ export default function KasirDashboard() {
         meter_awal: 0,
         meter_akhir: 0
     })
+
+    // --- STATE ---
+    // 👇 2. State untuk mengatur Sidebar Buka/Tutup
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+
+    const [profile, setProfile] = useState<| null>(null)
+    const [name, setName] = useState("")
+    const [userId, setUserId] = useState<string>("")
+    const [selectedFile, setSelectedFile] = useState<File | null>(null)
+    const [uploadingId, setUploadingId] = useState<number | null>(null)
+    const [greeting, setGreeting] = useState("")
+
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [pelanggan, setPelanggan] = useState<any[]>([])
@@ -141,34 +154,36 @@ export default function KasirDashboard() {
             <div className="absolute top-20 right-20 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl z-0"></div>
             <div className="absolute top-40 left-10 w-40 h-40 bg-blue-300 opacity-10 rounded-full blur-2xl z-0"></div>
 
+            {/* 👇 3. COMPONENT SIDEBAR (Dipasang disini) */}
+            <SidebarUser
+                isOpen={isSidebarOpen}
+                onClose={() => setIsSidebarOpen(false)}
+                onLogout={handleLogout}
+            />
+
+            {/* Background Accent */}
+            <div className="fixed top-0 left-0 right-0 h-64 bg-linear-to-br from-indigo-600 to-blue-500 rounded-b-[3rem] shadow-xl z-0 print:hidden"></div>
+
             {/* --- NAVBAR --- */}
-            <nav className="relative z-50 px-4 md:px-8 py-6">
-                <div className="container mx-auto max-w-6xl flex justify-between items-center bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl px-6 py-4 shadow-lg hover:shadow-xl transition-shadow duration-300">
-                    <div className="flex items-center gap-4">
-                        <div className="bg-white p-2.5 rounded-xl shadow-lg shadow-blue-900/20">
-                            {/* Logo Icon */}
-                            <svg className="w-6 h-6 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                            </svg>
-                        </div>
-                        <div className="text-white">
-                            <h1 className="font-extrabold text-xl tracking-tight leading-none">PDAM<span className="text-blue-200">KASIR</span></h1>
-                            <p className="text-[11px] font-medium text-blue-100/80 tracking-wide">PANEL PETUGAS</p>
-                        </div>
-                    </div>
+            <nav className="relative z-30 container mx-auto px-6 py-6 flex justify-between items-center text-white print:text-black">
+                <div className="flex items-center gap-4">
+
+                    {/* 👇 4. TOMBOL HAMBURGER (Untuk Buka Sidebar) */}
+                    {/* Ini akan muncul di Laptop DAN Mobile sesuai request Anda */}
+                    <button
+                        onClick={() => setIsSidebarOpen(true)}
+                        className="bg-white/20 hover:bg-white/30 backdrop-blur-md p-2.5 rounded-xl border border-white/20 transition active:scale-95"
+                    >
+                        {/* Icon Hamburger (Garis Tiga) */}
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h7" /></svg>
+                    </button>
+
 
                     <div className="flex items-center gap-6">
                         <div className="hidden md:flex flex-col items-end text-white">
                             <span className="text-[10px] uppercase font-bold tracking-wider opacity-70">Selamat Bertugas</span>
                             <span className="font-semibold text-sm">{kasirName || "Admin Petugas"}</span>
                         </div>
-                        <button
-                            onClick={handleLogout}
-                            className="bg-red-500/80 hover:bg-red-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-red-900/20 transition-all duration-200 hover:scale-105 active:scale-95 backdrop-blur-sm border border-red-400/30 flex items-center gap-2"
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                            <span className="hidden sm:inline">Keluar</span>
-                        </button>
                     </div>
                 </div>
             </nav>

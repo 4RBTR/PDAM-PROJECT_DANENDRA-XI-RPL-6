@@ -16,7 +16,7 @@ const SECRET = "pdam_super_secret_123";
 // ==========================================
 // Kita izinkan SEMUA alamat (*) supaya Frontend di HP/Laptop lain bisa masuk.
 app.use(cors({
-    origin: '*', 
+    origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
