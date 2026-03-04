@@ -5,7 +5,7 @@ import Link from 'next/link'
 import toast from "react-hot-toast"
 
 export default function ContactPage() {
-    // 👇 LOGIKA ASLI (TIDAK DIUBAH)
+    // 👇 LOGIKA ASLI
     const API_URL = process.env.NEXT_PUBLIC_API_URL
 
     const [form, setForm] = useState({ nama: "", email: "", pesan: "" })

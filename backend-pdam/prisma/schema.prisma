@@ -26,7 +26,8 @@ model User {
 model Tagihan {
   id           Int      @id @default(autoincrement())
   userId       Int
-  user         User     @relation(fields: [userId], references: [id]) 
+  // 👇 FIX: Tambah onDelete Cascade di sini
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade) 
   bulan        String
   tahun        Int
   meter_awal   Int
@@ -45,29 +46,30 @@ enum Role {
 
 // MODEL PENGADUAN (UPDATED)
 model Pengaduan {
-  id          Int      @id @default(autoincrement())
+  id              Int      @id @default(autoincrement())
   
   // Relasi ke User (Opsional)
-  userId      Int?      
-  user        User?    @relation(fields: [userId], references: [id])
+  userId          Int?      
+  // 👇 FIX: Tambah onDelete Cascade di sini
+  user            User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Identitas Pengirim (Tamu)
-  nama        String?  
-  email       String?  
+  nama            String?  
+  email           String?  
 
   // Data Laporan
-  judul       String   
-  deskripsi   String   @db.Text 
-  foto        String?  
+  judul           String   
+  deskripsi       String   @db.Text 
+  foto            String?  
   
   // Status & Respon
-  status      String   @default("PENDING") 
-  isRead      Boolean  @default(false)        
-  tanggapan   String?  @db.Text 
+  status          String   @default("PENDING") 
+  isRead          Boolean  @default(false)        
+  tanggapan       String?  @db.Text 
 
   // --- FIX: SOFT DELETE ---
   // Agar user bisa hapus dari tampilan mereka, tapi manager tetap bisa lihat
-  isDeletedByUser Boolean @default(false)
+  isDeletedByUser Boolean  @default(false)
 
-  createdAt   DateTime @default(now())
+  createdAt       DateTime @default(now())
 }

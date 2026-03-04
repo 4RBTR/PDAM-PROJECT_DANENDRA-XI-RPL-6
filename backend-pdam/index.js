@@ -12,18 +12,36 @@ const prisma = new PrismaClient();
 const SECRET = "pdam_super_secret_123";
 
 // ==========================================
-// 🔴 PENGATURAN KONEKSI (CORS) - PENTING!
+// 🟢 MIDDLEWARE AUTHENTICATION (PENAMBAHAN)
 // ==========================================
-// Kita izinkan SEMUA alamat (*) supaya Frontend di HP/Laptop lain bisa masuk.
+// Fungsi ini digunakan untuk mengecek apakah token yang dikirim valid
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ status: false, message: "Token tidak ditemukan, akses ditolak." });
+    }
+
+    jwt.verify(token, SECRET, (err, user) => {
+        if (err) {
+            return res.status(403).json({ status: false, message: "Token tidak valid atau sudah kadaluwarsa." });
+        }
+        req.user = user;
+        next();
+    });
+};
+
+// ==========================================
+// 🔴 PENGATURAN KONEKSI (CORS)
+// ==========================================
 app.use(cors({
     origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-app.use(express.json()); // Penting untuk membaca JSON body
-
-// Buka akses folder 'uploads' agar gambar bisa dilihat di Frontend
+app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // --- SETUP UPLOAD GAMBAR (MULTER) ---
@@ -88,6 +106,55 @@ app.get('/user/:id', async (req, res) => {
 app.get('/users/pelanggan', async (req, res) => {
     const data = await prisma.user.findMany({ where: { role: 'PELANGGAN' } });
     res.json({ status: true, data });
+});
+
+// KASIR/MANAGER: Update Data Pelanggan
+app.put('/user/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, email, address, password } = req.body;
+
+        let updateData = { name, email, address };
+
+        if (password && password.trim() !== "") {
+            updateData.password = await bcrypt.hash(password, 10);
+        }
+
+        const updatedUser = await prisma.user.update({
+            where: { id: parseInt(id) },
+            data: updateData
+        });
+
+        res.json({ status: true, message: "Data pelanggan berhasil diubah!", data: updatedUser });
+    } catch (err) {
+        res.status(500).json({ status: false, message: "Gagal mengubah data pelanggan. Email mungkin sudah dipakai." });
+    }
+});
+
+// KASIR/MANAGER: Hapus Pelanggan
+app.delete('/user/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await prisma.user.delete({
+            where: { id: parseInt(id) }
+        });
+        res.json({ status: true, message: "Pelanggan berhasil dihapus!" });
+    } catch (err) {
+        res.status(500).json({ status: false, message: "Gagal menghapus! Pastikan pelanggan ini tidak memiliki tagihan atau pengaduan." });
+    }
+});
+
+// MANAGER: Ambil SEMUA pelanggan
+app.get('/manager/users', async (req, res) => {
+    try {
+        const data = await prisma.user.findMany({
+            where: { role: 'PELANGGAN' },
+            orderBy: { name: 'asc' }
+        });
+        res.json({ status: true, data: data });
+    } catch (err) {
+        res.status(500).json({ status: false, message: "Gagal mengambil data pelanggan" });
+    }
 });
 
 
@@ -183,6 +250,7 @@ app.put('/tagihan/verifikasi/:id', async (req, res) => {
     }
 });
 
+
 // ==========================================
 // 3. KHUSUS MANAGER (DASHBOARD STATISTIK)
 // ==========================================
@@ -266,11 +334,10 @@ app.post('/contact', async (req, res) => {
     }
 });
 
-// USER/PELANGGAN: Kirim Pengaduan (Dengan Gambar)
+// USER/PELANGGAN: Kirim Pengaduan
 app.post('/pengaduan', upload.single('image'), async (req, res) => {
     try {
         const { user_id, nama, email, judul, deskripsi } = req.body;
-
         const fotoName = req.file ? req.file.filename : null;
         const userIdInt = (user_id && user_id !== 'undefined' && user_id !== 'null') ? parseInt(user_id) : null;
 
@@ -369,6 +436,37 @@ app.delete('/manager/pengaduan/:id', async (req, res) => {
     }
 });
 
+// ==========================================
+// 5. RIWAYAT PER USER (UNTUK MANAGER)
+// ==========================================
+app.get('/manager/users/:id/history', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const user = await prisma.user.findUnique({
+            where: { id: parseInt(id) },
+            select: { name: true, email: true, address: true }
+        });
+
+        if (!user) {
+            return res.status(404).json({ status: false, message: "User tidak ditemukan" });
+        }
+
+        const transactions = await prisma.tagihan.findMany({
+            where: { userId: parseInt(id) },
+            orderBy: { id: 'desc' } // Mengurutkan dari transaksi terbaru
+        });
+
+        res.json({
+            status: true,
+            user,
+            transactions
+        });
+    } catch (error) {
+        res.status(500).json({ status: false, message: error.message });
+    }
+});
+
 
 // ==========================================
 // EXPORT SERVER
@@ -378,7 +476,6 @@ module.exports = app;
 
 if (!process.env.VERCEL) {
     const PORT = process.env.PORT || 8000;
-    // 🔴 PENTING: Listen ke '0.0.0.0' supaya bisa diakses dari jaringan (IP) lain
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`🚀 Server PDAM jalan di port ${PORT} dan terbuka untuk semua IP`);
     });

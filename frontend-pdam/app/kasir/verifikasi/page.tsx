@@ -1,10 +1,21 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import toast from "react-hot-toast"
+import toast, { Toaster } from "react-hot-toast"
 import { getAuthToken, getUserRole } from "@/utils/cookies"
+import SidebarKasir from "@/components/Kasir/SidebarKasir"
+import { 
+    Menu, 
+    CheckCircle, 
+    XCircle, 
+    ExternalLink, 
+    Search, 
+    Clock, 
+    AlertCircle,
+    ChevronRight
+} from "lucide-react"
 
 interface ITagihanVerifikasi {
     id: number;
@@ -17,64 +28,63 @@ interface ITagihanVerifikasi {
 }
 
 export default function VerifikasiPage() {
-    // 👇 Menggunakan ENV Variable agar konsisten dengan file lain
     const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-
-    const [list, setList] = useState<ITagihanVerifikasi[]>([])
-    const [loading, setLoading] = useState(true)
     const router = useRouter()
 
-    // --- STATE UNTUK MODAL & PROSES ---
+    // --- STATE ---
+    const [list, setList] = useState<ITagihanVerifikasi[]>([])
+    const [loading, setLoading] = useState(true)
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+    const [searchTerm, setSearchTerm] = useState("")
+
+    // --- STATE MODAL & PROSES ---
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [processing, setProcessing] = useState(false)
     const [selectedItem, setSelectedItem] = useState<ITagihanVerifikasi | null>(null)
     const [actionType, setActionType] = useState<'TERIMA' | 'TOLAK' | null>(null)
-    const [catatan, setCatatan] = useState("") 
+    const [catatan, setCatatan] = useState("")
+
+    const loadData = useCallback(async () => {
+        setLoading(true)
+        try {
+            const token = getAuthToken()
+            const res = await fetch(`${API_URL}/tagihan/verifikasi/list`, {
+                headers: { "Authorization": `Bearer ${token}` }
+            })
+            const data = await res.json()
+            if (data.status) setList(data.data)
+        } catch (error) {
+            toast.error("Gagal memuat data verifikasi")
+        } finally {
+            setLoading(false)
+        }
+    }, [API_URL])
 
     useEffect(() => {
         const token = getAuthToken()
         const role = getUserRole()
 
-        if (!token) {
+        if (!token || role !== "KASIR") {
             router.push("/login")
             return
         }
-
-        if (role !== "KASIR") {
-            router.push("/login")
-            return
-        }
-
         loadData()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
+    }, [router, loadData])
 
-    const loadData = async () => {
-        try {
-            const token = getAuthToken()
-            // 👇 Fetch menggunakan API_URL dari env
-            const res = await fetch(`${API_URL}/tagihan/verifikasi/list`, {
-                headers: { 
-                    "Authorization": `Bearer ${token}` 
-                }
-            })
-            const data = await res.json()
-            if (data.status) {
-                setList(data.data)
-            }
-        } catch (error) {
-            console.error("Error fetching verification list", error)
-            toast.error("Gagal memuat data list")
-        } finally {
-            setLoading(false)
-        }
+    const filteredList = list.filter(item => 
+        item.userName.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+
+    const handleLogout = () => {
+        localStorage.clear()
+        document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;"
+        router.push('/')
     }
 
-    // --- LOGIKA MODAL ---
     const openConfirmModal = (item: ITagihanVerifikasi, type: 'TERIMA' | 'TOLAK') => {
         setSelectedItem(item)
         setActionType(type)
-        setCatatan("") 
+        setCatatan("")
         setIsModalOpen(true)
     }
 
@@ -82,226 +92,212 @@ export default function VerifikasiPage() {
         setIsModalOpen(false)
         setSelectedItem(null)
         setActionType(null)
-        setProcessing(false)
     }
 
-    // --- PROSES API ---
     const handleProcess = async () => {
         if (!selectedItem || !actionType) return;
-
         if (actionType === 'TOLAK' && catatan.trim().length < 5) {
-             toast("Mohon isi alasan penolakan (minimal 5 karakter)", { icon: "✍️" });
-             return;
+            toast.error("Mohon isi alasan penolakan!");
+            return;
         }
 
         setProcessing(true)
-        const token = getAuthToken()
-
         try {
-            // 👇 Request PUT ke endpoint API
             const res = await fetch(`${API_URL}/tagihan/verifikasi/${selectedItem.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${getAuthToken()}`
                 },
-                body: JSON.stringify({ 
-                    aksi: actionType,
-                    catatan: catatan 
-                })
+                body: JSON.stringify({ aksi: actionType, catatan })
             })
             const data = await res.json()
-
             if (data.status) {
-                toast.success(`Berhasil: ${actionType === 'TERIMA' ? 'Tagihan Lunas' : 'Bukti Ditolak'}`);
-                setList(prev => prev.filter(item => item.id !== selectedItem.id))
+                toast.success(actionType === 'TERIMA' ? "Pembayaran Disetujui" : "Pembayaran Ditolak")
+                setList(prev => prev.filter(i => i.id !== selectedItem.id))
                 closeModal()
-            } else {
-                toast.error("Gagal: " + data.message)
-            }
-        } catch (error) {
-            toast.error("Terjadi kesalahan koneksi.")
-            console.error(error)
-        } finally {
-            setProcessing(false)
-        }
+            } else toast.error(data.message)
+        } catch (e) { toast.error("Koneksi gagal") }
+        finally { setProcessing(false) }
     }
 
     return (
-        <div className="p-6 md:p-10 bg-slate-50 min-h-screen font-sans text-slate-800">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
-                <div>
-                    <h1 className="text-3xl font-black text-sky-800 flex items-center gap-2">
-                        <span>🔍</span> VERIFIKASI PEMBAYARAN
-                    </h1>
-                    <p className="text-slate-500 mt-1">Validasi bukti transfer pelanggan.</p>
-                </div>
-                <button
-                    onClick={() => router.push('/kasir/dashboard')}
-                    className="bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition"
-                >
-                    &larr; Kembali ke Dashboard
-                </button>
-            </div>
+        <div className="min-h-screen bg-[#F8FAFC] flex">
+            <Toaster position="top-center" />
 
-            {/* Content List */}
-            {loading ? (
-                <div className="flex flex-col items-center justify-center py-20">
-                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-sky-600 mb-4"></div>
-                    <p className="text-slate-400">Memuat data...</p>
-                </div>
-            ) : (
-                <div className="grid gap-6">
-                    {list.length === 0 && (
-                        <div className="bg-white p-16 text-center rounded-3xl border-2 border-dashed border-slate-200">
-                            <p className="text-6xl mb-4">📂</p>
-                            <h3 className="text-xl font-bold text-slate-600">Semua Bersih!</h3>
-                            <p className="text-slate-400">Tidak ada pembayaran menunggu verifikasi.</p>
+            {/* Sidebar Komponen */}
+            <SidebarKasir 
+                isOpen={isSidebarOpen} 
+                onClose={() => setIsSidebarOpen(false)} 
+                onLogout={handleLogout} 
+            />
+
+            {/* Konten Utama - Penyesuaian lg:ml-72 */}
+            <main className="flex-1 flex flex-col min-w-0 lg:ml-72 transition-all">
+                
+                {/* Header Section */}
+                <header className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-20">
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 hover:bg-slate-100 rounded-lg">
+                            <Menu size={20} />
+                        </button>
+                        <div>
+                            <h1 className="text-xl font-black text-slate-800 tracking-tight uppercase">Verifikasi Pembayaran</h1>
+                            <p className="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Konfirmasi bukti transfer</p>
+                        </div>
+                    </div>
+                    
+                    <div className="hidden md:block relative w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                        <input 
+                            type="text" 
+                            placeholder="Cari nama pelanggan..." 
+                            className="w-full pl-10 pr-4 py-2 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                </header>
+
+                <div className="p-6 lg:p-10 max-w-6xl mx-auto w-full space-y-8">
+                    
+                    {/* Status Ringkas */}
+                    <div className="bg-blue-600 rounded-[2rem] p-8 text-white shadow-xl shadow-blue-100 flex items-center justify-between overflow-hidden relative">
+                        <div className="z-10">
+                            <h2 className="text-2xl font-black mb-1 tracking-tight">Antrean Verifikasi</h2>
+                            <p className="text-blue-100 text-sm font-medium">Ada <span className="underline decoration-white/50">{list.length} transaksi</span> yang butuh tindakan Anda hari ini.</p>
+                        </div>
+                        <div className="z-10 bg-white/10 p-4 rounded-2xl backdrop-blur-md border border-white/20">
+                            <Clock size={32} className="text-white" />
+                        </div>
+                        <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/5 rounded-full blur-3xl"></div>
+                    </div>
+
+                    {/* List Cards */}
+                    {loading ? (
+                        <div className="py-20 text-center animate-pulse text-slate-400 font-bold uppercase tracking-widest text-sm">Sedang Menyelaraskan Data...</div>
+                    ) : filteredList.length === 0 ? (
+                        <div className="bg-white p-20 rounded-[2.5rem] border-2 border-dashed border-slate-200 text-center">
+                            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
+                                <AlertCircle size={40} />
+                            </div>
+                            <h3 className="text-xl font-black text-slate-800">Tidak ada antrean</h3>
+                            <p className="text-slate-400 text-sm mt-1">Semua bukti pembayaran sudah terverifikasi.</p>
+                        </div>
+                    ) : (
+                        <div className="grid gap-6">
+                            {filteredList.map((item) => (
+                                <div key={item.id} className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all group border-l-8 border-l-blue-500">
+                                    <div className="flex flex-col lg:flex-row gap-8">
+                                        {/* Bagian Gambar */}
+                                        <div className="w-full lg:w-48 h-48 relative rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
+                                            <Image 
+                                                src={`${API_URL}/uploads/${item.bukti_bayar}`}
+                                                alt="Bukti Transfer"
+                                                fill
+                                                className="object-cover group-hover:scale-110 transition-transform duration-500"
+                                                unoptimized
+                                            />
+                                            <a 
+                                                href={`${API_URL}/uploads/${item.bukti_bayar}`} 
+                                                target="_blank" 
+                                                className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                                            >
+                                                <ExternalLink className="text-white" size={24} />
+                                            </a>
+                                        </div>
+
+                                        {/* Bagian Info */}
+                                        <div className="flex-1 space-y-4">
+                                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-50 pb-4">
+                                                <div>
+                                                    <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Nama Pelanggan</span>
+                                                    <h3 className="text-xl font-black text-slate-800 tracking-tight">{item.userName}</h3>
+                                                </div>
+                                                <div className="text-left md:text-right">
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Periode Tagihan</span>
+                                                    <p className="font-bold text-slate-600">{item.bulan} {item.tahun}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nominal Transfer</p>
+                                                    <p className="text-2xl font-black text-slate-800">Rp {item.total_bayar.toLocaleString('id-ID')}</p>
+                                                </div>
+                                                
+                                                <div className="flex items-center gap-3">
+                                                    <button 
+                                                        onClick={() => openConfirmModal(item, 'TERIMA')}
+                                                        className="flex-1 h-full bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 transition-all active:scale-95"
+                                                    >
+                                                        <CheckCircle size={18} /> Terima
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => openConfirmModal(item, 'TOLAK')}
+                                                        className="flex-1 h-full bg-white border-2 border-rose-100 text-rose-500 hover:bg-rose-50 font-black text-xs uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95"
+                                                    >
+                                                        <XCircle size={18} /> Tolak
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     )}
-
-                    {list.map((item) => (
-                        <div key={item.id} className="bg-white p-6 rounded-2xl shadow-md border border-slate-100 flex flex-col md:flex-row gap-8 hover:shadow-lg transition duration-300">
-                            
-                            {/* Kiri: Bukti Bayar */}
-                            <div className="w-full md:w-1/3">
-                                <p className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
-                                    <span>📷</span> Bukti Transfer
-                                </p>
-                                <div className="bg-slate-100 p-2 rounded-xl border border-slate-200 group relative">
-                                    {/* 👇 Menggunakan API_URL untuk path gambar */}
-                                    <a href={`${API_URL}/uploads/${item.bukti_bayar}`} target="_blank" rel="noreferrer" className="block relative overflow-hidden rounded-lg">
-                                        <Image
-                                            src={`${API_URL}/uploads/${item.bukti_bayar}`}
-                                            alt="Bukti Bayar"
-                                            width={400}
-                                            height={300}
-                                            className="w-full h-56 object-cover transform group-hover:scale-105 transition duration-500 cursor-zoom-in"
-                                            unoptimized={true} 
-                                        />
-                                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition duration-300 flex items-center justify-center">
-                                            <span className="text-white opacity-0 group-hover:opacity-100 font-bold bg-black/50 px-3 py-1 rounded-full text-xs backdrop-blur-sm">
-                                                Lihat Asli
-                                            </span>
-                                        </div>
-                                    </a>
-                                </div>
-                            </div>
-
-                            {/* Kanan: Info & Aksi */}
-                            <div className="w-full md:w-2/3 flex flex-col justify-between">
-                                <div>
-                                    <div className="flex justify-between items-start border-b border-slate-100 pb-4 mb-4">
-                                        <div>
-                                            <p className="text-xs font-bold text-sky-600 uppercase tracking-widest mb-1">Pelanggan</p>
-                                            <h2 className="text-2xl font-black text-slate-800 uppercase leading-none">{item.userName}</h2>
-                                        </div>
-                                        <div className="text-right">
-                                            <span className="inline-block px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold mb-1">
-                                                Menunggu Konfirmasi
-                                            </span>
-                                            <p className="text-sm font-medium text-slate-500">
-                                                Tagihan: {item.bulan} {item.tahun}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-sky-50 p-5 rounded-xl border border-sky-100 flex items-center justify-between">
-                                        <span className="text-sm font-semibold text-sky-800">Total Nominal:</span>
-                                        <span className="text-3xl font-black text-sky-700">Rp {item.total_bayar.toLocaleString('id-ID')}</span>
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-4 mt-6">
-                                    <button
-                                        onClick={() => openConfirmModal(item, 'TERIMA')}
-                                        className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-emerald-200 transition transform active:scale-95 flex justify-center items-center gap-2"
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                        </svg>
-                                        TERIMA (LUNAS)
-                                    </button>
-
-                                    <button
-                                        onClick={() => openConfirmModal(item, 'TOLAK')}
-                                        className="flex-1 bg-white border-2 border-red-100 text-red-500 hover:bg-red-50 hover:border-red-200 py-3.5 rounded-xl font-bold transition transform active:scale-95 flex justify-center items-center gap-2"
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                        TOLAK BUKTI
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
                 </div>
-            )}
+            </main>
 
-            {/* --- MODAL CONFIRMATION (POPUP) --- */}
+            {/* Modal Konfirmasi */}
             {isModalOpen && selectedItem && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 transform scale-100 transition-all">
-                        
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden p-8 animate-in zoom-in-95 duration-200">
                         <div className="text-center mb-6">
-                            <div className={`mx-auto flex items-center justify-center h-16 w-16 rounded-full mb-4 ${actionType === 'TERIMA' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
-                                {actionType === 'TERIMA' ? (
-                                    <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                ) : (
-                                    <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                    </svg>
-                                )}
+                            <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${actionType === 'TERIMA' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+                                {actionType === 'TERIMA' ? <CheckCircle size={40} /> : <XCircle size={40} />}
                             </div>
-                            <h3 className="text-xl font-black text-slate-800">
-                                {actionType === 'TERIMA' ? 'Konfirmasi Pelunasan' : 'Tolak Bukti Bayar'}
+                            <h3 className="text-2xl font-black text-slate-800 tracking-tight">
+                                {actionType === 'TERIMA' ? 'Konfirmasi Lunas' : 'Tolak Bukti Bayar'}
                             </h3>
-                            <p className="text-slate-500 mt-2 text-sm">
-                                {actionType === 'TERIMA' 
-                                    ? `Pastikan dana Rp ${selectedItem.total_bayar.toLocaleString()} sudah masuk ke rekening.` 
-                                    : `Anda akan menolak bukti dari ${selectedItem.userName}.`
-                                }
+                            <p className="text-slate-500 text-sm mt-2 font-medium">
+                                Anda akan {actionType === 'TERIMA' ? 'mensahkan' : 'menolak'} pembayaran senilai <br/>
+                                <span className="font-black text-slate-800">Rp {selectedItem.total_bayar.toLocaleString('id-ID')}</span>
                             </p>
                         </div>
 
-                        {/* Input Alasan Jika Tolak */}
                         {actionType === 'TOLAK' && (
                             <div className="mb-6">
-                                <label className="block text-sm font-bold text-slate-700 mb-2">Alasan Penolakan <span className="text-red-500">*</span></label>
-                                <textarea
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 ml-1">Alasan Penolakan</label>
+                                <textarea 
+                                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium outline-none focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 transition-all resize-none"
+                                    rows={3}
+                                    placeholder="Contoh: Foto buram atau nominal tidak sesuai..."
                                     value={catatan}
                                     onChange={(e) => setCatatan(e.target.value)}
-                                    placeholder="Contoh: Foto buram, Nominal kurang, dll..."
-                                    className="w-full border border-slate-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm h-24 resize-none"
-                                ></textarea>
+                                />
                             </div>
                         )}
 
                         <div className="flex gap-3">
-                            <button
+                            <button 
                                 onClick={closeModal}
-                                disabled={processing}
-                                className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition"
+                                className="flex-1 py-4 text-sm font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors"
                             >
                                 Batal
                             </button>
-                            <button
+                            <button 
                                 onClick={handleProcess}
                                 disabled={processing}
-                                className={`flex-1 py-3 px-4 text-white font-bold rounded-xl transition flex justify-center items-center gap-2 ${
-                                    actionType === 'TERIMA' 
-                                    ? 'bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-200' 
-                                    : 'bg-red-500 hover:bg-red-600 shadow-lg shadow-red-200'
-                                }`}
+                                className={`flex-[2] py-4 rounded-2xl text-sm font-black text-white uppercase tracking-widest shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2
+                                    ${actionType === 'TERIMA' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-200' : 'bg-rose-600 hover:bg-rose-700 shadow-rose-200'}
+                                    ${processing ? 'opacity-50 cursor-not-allowed' : ''}
+                                `}
                             >
-                                {processing ? 'Memproses...' : (actionType === 'TERIMA' ? 'Ya, Valid' : 'Tolak')}
+                                {processing ? 'Memproses...' : (actionType === 'TERIMA' ? 'Sahkan Lunas' : 'Tolak Sekarang')}
                             </button>
                         </div>
-
                     </div>
                 </div>
             )}
