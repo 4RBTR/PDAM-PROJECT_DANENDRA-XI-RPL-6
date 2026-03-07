@@ -3,9 +3,22 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
-import toast from "react-hot-toast"
+import toast, { Toaster } from "react-hot-toast"
 import { getAuthToken, getUserRole, getUserId, getUserName, removeAuthToken } from "@/utils/cookies"
+import SidebarUser from "@/components/User/SidebarUser"
+import {
+    Menu,
+    MessageSquarePlus,
+    Image as ImageIcon,
+    Send,
+    Trash2,
+    MessageCircle,
+    Info,
+    CheckCircle2,
+    Clock,
+    AlertCircle,
+    UploadCloud
+} from "lucide-react"
 
 // --- INTERFACES ---
 interface IPengaduan {
@@ -19,46 +32,40 @@ interface IPengaduan {
 }
 
 export default function UserPengaduan() {
-    // 0. SETUP ENV URL
-    // Mengambil URL dari file .env (Next.js otomatis membaca NEXT_PUBLIC_*)
     const API_URL = process.env.NEXT_PUBLIC_API_URL
 
-    // 1. STATE
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false)
     const [riwayat, setRiwayat] = useState<IPengaduan[]>([])
-
-    // Form State
     const [judul, setJudul] = useState("")
     const [deskripsi, setDeskripsi] = useState("")
     const [foto, setFoto] = useState<File | null>(null)
-
     const [loading, setLoading] = useState(false)
     const [userName, setUserName] = useState("")
 
     const router = useRouter()
 
-    // 2. FETCH DATA RIWAYAT
+    // --- FETCH DATA RIWAYAT ---
     const ambilData = useCallback(async () => {
         const id = getUserId()
         const token = getAuthToken()
         if (!id || !token) return
 
         try {
-            // UPDATED: Menggunakan API_URL
             const res = await fetch(`${API_URL}/pengaduan/user/${id}`, {
                 headers: { "Authorization": `Bearer ${token}` }
             })
             const data = await res.json()
 
             if (data.status) {
-                setRiwayat(data.data)
+                // Reverse agar laporan terbaru ada di atas
+                setRiwayat(data.data.reverse())
             }
         } catch (error) {
-            console.error("Gagal ambil history pengaduan", error)
             toast.error("Gagal terhubung ke server")
         }
-    }, [API_URL]) // Dependency ditambahkan
+    }, [API_URL])
 
-    // 3. CEK AUTH
+    // --- CEK AUTH ---
     useEffect(() => {
         const token = getAuthToken()
         const role = getUserRole()
@@ -67,7 +74,6 @@ export default function UserPengaduan() {
             router.push("/login")
             return
         }
-
         if (role === "MANAGER") router.push("/manager/dashboard")
         if (role === "KASIR") router.push("/kasir/dashboard")
 
@@ -75,7 +81,7 @@ export default function UserPengaduan() {
         ambilData()
     }, [router, ambilData])
 
-    // 4. HANDLE SUBMIT (Kirim Laporan)
+    // --- HANDLE SUBMIT ---
     const handleKirim = async (e: React.FormEvent) => {
         e.preventDefault()
 
@@ -83,52 +89,47 @@ export default function UserPengaduan() {
 
         const token = getAuthToken()
         const id = getUserId()
+        const loadingToast = toast.loading("Mengirim laporan...")
         setLoading(true)
 
         const formData = new FormData()
         formData.append("user_id", id || "")
         formData.append("judul", judul)
         formData.append("deskripsi", deskripsi)
-        if (foto) {
-            formData.append("image", foto)
-        }
+        if (foto) formData.append("image", foto)
 
         try {
-            // UPDATED: Menggunakan API_URL
             const res = await fetch(`${API_URL}/pengaduan`, {
                 method: 'POST',
                 headers: { "Authorization": `Bearer ${token}` },
                 body: formData
             })
             const data = await res.json()
+            toast.dismiss(loadingToast)
 
             if (data.status) {
                 toast.success("Laporan berhasil dikirim!")
                 setJudul("")
                 setDeskripsi("")
                 setFoto(null)
-                ambilData() // Refresh list
+                ambilData()
             } else {
                 toast.error(data.message || "Gagal mengirim")
             }
         } catch (error) {
+            toast.dismiss(loadingToast)
             toast.error("Terjadi kesalahan sistem")
         } finally {
             setLoading(false)
         }
     }
 
-    // ---------------------------------------------------------
-    // 5. HANDLE HAPUS
-    // ---------------------------------------------------------
-
-    // Fungsi A: Menjalankan penghapusan
+    // --- HANDLE HAPUS ---
     const executeHapus = async (id: number) => {
         const token = getAuthToken()
-        const loadingToast = toast.loading("Sedang menghapus...");
+        const loadingToast = toast.loading("Sedang menghapus...")
 
         try {
-            // UPDATED: Menggunakan API_URL
             const res = await fetch(`${API_URL}/pengaduan/${id}`, {
                 method: "DELETE",
                 headers: { "Authorization": `Bearer ${token}` }
@@ -136,8 +137,8 @@ export default function UserPengaduan() {
             const data = await res.json()
 
             if (data.status) {
-                toast.success("Laporan berhasil dihapus", { id: loadingToast })
-                ambilData() 
+                toast.success("Laporan dibatalkan", { id: loadingToast })
+                ambilData()
             } else {
                 toast.error(data.message || "Gagal menghapus", { id: loadingToast })
             }
@@ -146,245 +147,279 @@ export default function UserPengaduan() {
         }
     }
 
-    // Fungsi B: Memunculkan UI Konfirmasi
     const handleHapus = (id: number) => {
         toast((t) => (
-            <div className="flex flex-col gap-3 items-center min-w-62.5 p-2">
-                <div className="text-center">
-                    <p className="font-bold text-slate-800">Hapus Laporan?</p>
-                    <p className="text-xs text-slate-500 mt-1">Data yang dihapus tidak bisa dikembalikan.</p>
+            <div className="flex flex-col gap-3 min-w-62.5 p-1">
+                <div>
+                    <p className="font-bold text-slate-800 text-sm">Batalkan Laporan?</p>
+                    <p className="text-xs text-slate-500 mt-1">Laporan yang dibatalkan tidak bisa dikembalikan.</p>
                 </div>
-
                 <div className="flex gap-2 w-full mt-2">
-                    <button
-                        onClick={() => toast.dismiss(t.id)}
-                        className="flex-1 bg-slate-100 text-slate-600 text-xs py-2.5 px-3 rounded-lg hover:bg-slate-200 transition font-bold"
-                    >
-                        Batal
+                    <button onClick={() => toast.dismiss(t.id)} className="flex-1 bg-slate-100 text-slate-600 text-xs py-2.5 rounded-lg hover:bg-slate-200 transition font-bold">
+                        Kembali
                     </button>
-                    <button
-                        onClick={() => {
-                            toast.dismiss(t.id)
-                            executeHapus(id)
-                        }}
-                        className="flex-1 bg-red-500 text-white text-xs py-2.5 px-3 rounded-lg hover:bg-red-600 transition font-bold shadow-red-200 shadow-md"
-                    >
-                        Ya, Hapus
+                    <button onClick={() => { toast.dismiss(t.id); executeHapus(id); }} className="flex-1 bg-rose-500 text-white text-xs py-2.5 rounded-lg hover:bg-rose-600 transition font-bold shadow-md shadow-rose-200">
+                        Ya, Batalkan
                     </button>
                 </div>
             </div>
-        ), {
-            duration: 5000,
-            position: 'top-center',
-            style: {
-                background: '#fff',
-                borderRadius: '1rem',
-                boxShadow: '0 10px 30px -10px rgba(0,0,0,0.15)',
-                border: '1px solid #f1f5f9'
-            }
-        })
+        ), { duration: 5000, position: 'top-center' })
     }
 
     const handleLogout = () => {
         removeAuthToken()
-        toast.success("Berhasil keluar")
         router.push("/")
     }
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans pb-20 selection:bg-indigo-100 selection:text-indigo-700">
+        <div className="min-h-screen bg-[#FAFAFA] flex overflow-x-hidden font-sans text-slate-800 selection:bg-blue-100 selection:text-blue-700">
+            <Toaster position="top-center" />
 
-            {/* Background Header */}
-            <div className="fixed top-0 left-0 right-0 h-64 bg-linear-to-br from-indigo-600 to-blue-500 rounded-b-[3rem] shadow-xl z-0"></div>
+            {/* SIDEBAR COMPONENT */}
+            <SidebarUser
+                isOpen={isSidebarOpen}
+                onClose={() => setIsSidebarOpen(false)}
+                onLogout={handleLogout}
+            />
 
-            {/* --- NAVBAR --- */}
-            <nav className="relative z-50 container mx-auto px-6 py-6 flex justify-between items-center text-white">
-                <div className="flex items-center gap-3">
-                    <Link href="/user/dashboard" className="bg-white/20 hover:bg-white/30 backdrop-blur-md p-2 rounded-xl border border-white/20 transition">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                    </Link>
-                    <div>
-                        <h1 className="font-bold text-xl tracking-tight leading-none">Layanan Pengaduan</h1>
-                        <p className="text-xs opacity-80 font-medium">PDAM Support Center</p>
+            {/* Overlay Mobile */}
+            {isSidebarOpen && (
+                <div
+                    className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-30 lg:hidden"
+                    onClick={() => setIsSidebarOpen(false)}
+                />
+            )}
+
+            {/* MAIN CONTENT */}
+            <main className="flex-1 flex flex-col min-w-0 transition-all duration-300 lg:ml-72 pb-24 relative">
+
+                {/* HEADER / NAVBAR */}
+                <header className="bg-white/60 backdrop-blur-xl border-b border-slate-100 px-6 lg:px-10 py-5 flex justify-between items-center sticky top-0 z-20">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => setIsSidebarOpen(true)}
+                            className="lg:hidden p-2 -ml-2 hover:bg-slate-100 rounded-xl text-slate-600 transition-colors"
+                        >
+                            <Menu size={24} />
+                        </button>
+                        <div>
+                            <h1 className="font-extrabold text-xl text-slate-800 tracking-tight leading-none">Layanan Pengaduan</h1>
+                            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1.5">Pusat Bantuan PDAM</p>
+                        </div>
                     </div>
-                </div>
-                <button onClick={handleLogout} className="bg-red-500/80 hover:bg-red-500 px-4 py-2 rounded-lg text-sm font-bold shadow-lg shadow-red-500/20 transition">
-                    Logout
-                </button>
-            </nav>
+                    <div className="w-11 h-11 bg-linear-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center font-black text-white shadow-lg shadow-blue-200 ring-4 ring-white">
+                        {userName.charAt(0).toUpperCase()}
+                    </div>
+                </header>
 
-            {/* --- MAIN CONTENT --- */}
-            <main className="relative z-10 container mx-auto px-6 mt-4">
+                <div className="p-6 lg:p-10 max-w-6xl mx-auto w-full">
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* 1. HERO BANNER (Disamakan dengan Tema Dashboard User) */}
+                    <div className="bg-[#0A0F2C] rounded-[2.5rem] p-8 md:p-12 shadow-2xl shadow-blue-900/10 relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-10">
+                        {/* Efek Cahaya Abstract (Glowing Orbs) */}
+                        <div className="absolute top-0 right-0 w-125 h-125 bg-linear-to-br from-blue-600/40 to-indigo-600/40 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+                        <div className="absolute bottom-0 left-0 w-75 h-75 bg-blue-400/20 rounded-full blur-[80px] translate-y-1/3 -translate-x-1/3 pointer-events-none"></div>
 
-                    {/* KOLOM KIRI: FORM INPUT */}
-                    <div className="lg:col-span-1">
-                        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-xl shadow-slate-200/50 border border-white/50 backdrop-blur-sm sticky top-6">
-                            <div className="mb-6">
-                                <h2 className="text-2xl font-black text-slate-800 mb-1">Buat Laporan</h2>
-                                <p className="text-slate-500 text-sm">Sertakan foto bukti agar penanganan lebih cepat.</p>
+                        <div className="relative z-10 text-white max-w-2xl">
+                            <div className="flex items-center gap-3 mb-5">
+                                <div className="p-2.5 bg-white/10 rounded-2xl backdrop-blur-md border border-white/10 shadow-inner">
+                                    <MessageSquarePlus size={28} className="text-blue-400" />
+                                </div>
+                                <h2 className="text-3xl md:text-4xl font-black tracking-tight">Sampaikan Kendala Anda</h2>
                             </div>
+                            <p className="text-blue-100/80 text-sm md:text-base leading-relaxed font-medium">
+                                Ada pipa bocor? Air keruh? Atau tagihan tidak sesuai? Jangan ragu untuk melaporkannya. Tim teknis dan layanan pelanggan kami siap merespons laporan Anda secepatnya.
+                            </p>
+                        </div>
+                    </div>
 
-                            <form onSubmit={handleKirim} className="space-y-4">
-                                {/* Input Judul */}
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Judul Masalah</label>
-                                    <input
-                                        type="text"
-                                        value={judul}
-                                        onChange={(e) => setJudul(e.target.value)}
-                                        placeholder="Contoh: Pipa Bocor Depan Rumah"
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-                                    />
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
+
+                        {/*KOLOM KIRI: FORMULIR PENGADUAN*/}
+                        <div className="lg:col-span-5 h-fit sticky top-32">
+                            <div className="bg-white rounded-4xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/60">
+                                <div className="mb-8 flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                                        <MessageSquarePlus size={20} strokeWidth={2.5} />
+                                    </div>
+                                    <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">Buat Tiket Baru</h3>
                                 </div>
 
-                                {/* Input Deskripsi */}
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Detail Kronologi</label>
-                                    <textarea
-                                        value={deskripsi}
-                                        onChange={(e) => setDeskripsi(e.target.value)}
-                                        placeholder="Jelaskan lokasi dan masalahnya..."
-                                        className="w-full h-32 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition resize-none"
-                                    ></textarea>
-                                </div>
+                                <form onSubmit={handleKirim} className="space-y-5">
+                                    {/* Judul */}
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Subjek Masalah</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={judul}
+                                            onChange={(e) => setJudul(e.target.value)}
+                                            placeholder="Contoh: Pipa utama bocor"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all placeholder:text-slate-400"
+                                        />
+                                    </div>
 
-                                {/* Input Foto */}
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Foto Bukti (Opsional)</label>
-                                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 transition group">
-                                        <div className="flex flex-col items-center justify-center pt-2 pb-3">
+                                    {/* Deskripsi */}
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Detail Lokasi & Kejadian</label>
+                                        <textarea
+                                            required
+                                            value={deskripsi}
+                                            onChange={(e) => setDeskripsi(e.target.value)}
+                                            placeholder="Jelaskan secara rinci lokasi jalan, blok, atau masalah yang dialami..."
+                                            className="w-full h-32 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all resize-none placeholder:text-slate-400"
+                                        ></textarea>
+                                    </div>
+
+                                    {/* Upload Foto (Sesuai gaya User Dashboard) */}
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Lampiran Foto (Opsional)</label>
+                                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 hover:border-blue-400 rounded-2xl cursor-pointer bg-slate-50 hover:bg-blue-50/50 transition-colors group relative overflow-hidden">
                                             {foto ? (
-                                                <div className="text-center px-2">
-                                                    <p className="text-xs text-indigo-600 font-bold truncate max-w-50">{foto.name}</p>
-                                                    <p className="text-[10px] text-slate-400">Klik untuk ganti</p>
+                                                <div className="text-center p-4">
+                                                    <CheckCircle2 className="text-blue-500 mx-auto mb-2" size={28} />
+                                                    <span className="text-sm font-bold text-slate-700 block truncate max-w-50">{foto.name}</span>
+                                                    <span className="text-[10px] text-slate-400 font-medium mt-1 block">Klik untuk mengganti</span>
                                                 </div>
                                             ) : (
-                                                <>
-                                                    <span className="text-xl mb-1 opacity-40 group-hover:scale-110 transition">📷</span>
-                                                    <p className="text-[10px] text-slate-400">Upload Foto (Max 2MB)</p>
-                                                </>
+                                                <div className="flex flex-col items-center justify-center p-4">
+                                                    <div className="w-10 h-10 bg-white shadow-sm text-slate-400 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 group-hover:text-blue-500 transition-all">
+                                                        <UploadCloud size={20} />
+                                                    </div>
+                                                    <p className="text-xs font-bold text-slate-500 group-hover:text-blue-600 transition-colors">Pilih dari galeri</p>
+                                                    <p className="text-[10px] text-slate-400 font-medium mt-1">Max 2MB (JPG/PNG)</p>
+                                                </div>
                                             )}
-                                        </div>
-                                        <input
-                                            type="file"
-                                            className="hidden"
-                                            accept="image/*"
-                                            onChange={(e) => setFoto(e.target.files ? e.target.files[0] : null)}
-                                        />
-                                    </label>
-                                </div>
+                                            <input type="file" className="hidden" accept="image/*" onChange={(e) => setFoto(e.target.files ? e.target.files[0] : null)} />
+                                        </label>
+                                    </div>
 
-                                <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-indigo-200 transition active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
-                                >
-                                    {loading ? "Mengirim..." : "Kirim Laporan"}
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-
-                    {/* KOLOM KANAN: LIST RIWAYAT */}
-                    <div className="lg:col-span-2 space-y-6">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-xl font-bold text-slate-800 lg:text-white lg:drop-shadow-md">Riwayat Laporan</h3>
-                            <span className="bg-white/20 lg:bg-white/90 text-white lg:text-indigo-900 px-3 py-1 rounded-full text-xs font-bold backdrop-blur-md shadow-sm">
-                                {riwayat.length} Total
-                            </span>
-                        </div>
-
-                        {riwayat.length === 0 ? (
-                            <div className="bg-white rounded-3xl p-12 text-center shadow-sm border border-slate-100">
-                                <div className="text-6xl mb-4 opacity-20 grayscale">📂</div>
-                                <h4 className="font-bold text-lg text-slate-600">Belum ada laporan</h4>
-                                <p className="text-slate-400 text-sm mt-1">Jika ada masalah, silakan lapor di formulir sebelah kiri.</p>
+                                    <button
+                                        type="submit"
+                                        disabled={loading}
+                                        className="w-full bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase tracking-widest py-4 rounded-2xl shadow-[0_10px_20px_-10px_rgba(0,0,0,0.3)] transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-4"
+                                    >
+                                        {loading ? "Memproses..." : <><Send size={16} /> Kirim Tiket Laporan</>}
+                                    </button>
+                                </form>
                             </div>
-                        ) : (
-                            <div className="grid grid-cols-1 gap-4">
-                                {riwayat.map((item) => (
-                                    <div key={item.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition flex flex-col md:flex-row gap-6 group/card relative">
+                        </div>
 
-                                        {/* Bagian Text */}
-                                        <div className="flex-1 order-2 md:order-1 flex flex-col h-full">
 
-                                            {/* Header Kartu */}
-                                            <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                                    {new Date(item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
-                                                </span>
+                        {/* =========================================
+                            KOLOM KANAN: RIWAYAT PENGADUAN
+                        ========================================= */}
+                        <div className="lg:col-span-7 space-y-6">
+                            <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                                <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">Status Laporan Saya</h3>
+                                <div className="bg-slate-100 text-slate-600 px-4 py-1.5 rounded-xl text-xs font-black tracking-widest uppercase">
+                                    {riwayat.length} Tiket
+                                </div>
+                            </div>
 
-                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold border 
-                                                    ${item.status === 'PENDING' ? 'bg-yellow-50 text-yellow-600 border-yellow-100' :
-                                                        item.status === 'SELESAI' ? 'bg-green-50 text-green-600 border-green-100' :
-                                                            'bg-blue-50 text-blue-600 border-blue-100'}`}>
-                                                    {item.status || "DIPROSES"}
-                                                </span>
+                            {riwayat.length === 0 ? (
+                                <div className="bg-white rounded-[2.5rem] p-16 text-center border border-dashed border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+                                    <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-300">
+                                        <Info size={48} strokeWidth={1.5} />
+                                    </div>
+                                    <h4 className="font-black text-2xl text-slate-800 mb-2">Belum Ada Riwayat</h4>
+                                    <p className="text-slate-500 font-medium text-sm">Anda belum pernah membuat laporan atau pengaduan.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    {riwayat.map((item) => (
+                                        <div key={item.id} className="bg-white p-6 md:p-8 rounded-4xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/60 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.08)] transition-all duration-300 flex flex-col gap-6 relative group">
 
-                                                {/* TOMBOL HAPUS (Kanan Atas) */}
+                                            {/* Header Kartu: Status & Tanggal */}
+                                            <div className="flex flex-wrap justify-between items-center gap-4">
+                                                <div className="flex items-center gap-3">
+                                                    {item.status === 'SELESAI' ? (
+                                                        <span className="flex items-center gap-1.5 text-emerald-700 text-xs font-bold bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100">
+                                                            <CheckCircle2 size={14} /> SELESAI
+                                                        </span>
+                                                    ) : item.status === 'PENDING' ? (
+                                                        <span className="flex items-center gap-1.5 text-rose-700 text-xs font-bold bg-rose-50 px-4 py-2 rounded-xl border border-rose-100">
+                                                            <AlertCircle size={14} /> MENUNGGU
+                                                        </span>
+                                                    ) : (
+                                                        <span className="flex items-center gap-1.5 text-blue-700 text-xs font-bold bg-blue-50 px-4 py-2 rounded-xl border border-blue-100">
+                                                            <Clock size={14} /> DIPROSES
+                                                        </span>
+                                                    )}
+
+                                                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                                                        {new Date(item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                    </span>
+                                                </div>
+
+                                                {/* Tombol Batalkan Laporan (Hanya muncul saat hover di Desktop) */}
                                                 <button
                                                     onClick={() => handleHapus(item.id)}
-                                                    className="ml-auto text-xs flex items-center gap-1 text-slate-300 hover:text-red-500 transition px-2 py-1 rounded-md hover:bg-red-50"
-                                                    title="Hapus Laporan"
+                                                    className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-colors md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
+                                                    title="Batalkan Tiket"
                                                 >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                                    <span className="hidden md:inline">Hapus</span>
+                                                    <Trash2 size={18} />
                                                 </button>
                                             </div>
 
-                                            <h4 className="font-bold text-lg text-slate-800 mb-2">{item.judul}</h4>
+                                            {/* Konten Laporan (Text & Image Flex) */}
+                                            <div className="flex flex-col md:flex-row gap-6">
+                                                <div className="flex-1">
+                                                    <h4 className="font-extrabold text-2xl text-slate-800 tracking-tight mb-3">{item.judul}</h4>
+                                                    <p className="text-slate-600 text-sm leading-relaxed font-medium">
+                                                        {item.deskripsi}
+                                                    </p>
+                                                </div>
 
-                                            <p className="text-slate-600 text-sm leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                                {item.deskripsi}
-                                            </p>
-
-                                            {/* Balasan Manager */}
-                                            {item.tanggapan && (
-                                                <div className="mt-4 bg-indigo-50 border border-indigo-100 p-4 rounded-xl relative animate-fadeIn">
-                                                    <div className="absolute -top-3 left-4 bg-white border border-indigo-100 p-1 rounded-full shadow-sm">
-                                                        <span className="text-lg">💬</span>
+                                                {/* Jika ada foto bukti */}
+                                                {item.foto && (
+                                                    <div className="w-full md:w-40 h-48 md:h-32 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 relative group/img">
+                                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                        <img
+                                                            src={`${API_URL}/uploads/${item.foto}`}
+                                                            alt="Bukti Pengaduan"
+                                                            className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110"
+                                                        />
+                                                        <a
+                                                            href={`${API_URL}/uploads/${item.foto}`}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold uppercase tracking-widest"
+                                                        >
+                                                            Lihat Full
+                                                        </a>
                                                     </div>
-                                                    <p className="text-[10px] font-bold text-indigo-600 uppercase mb-1 mt-1">
-                                                        Balasan Petugas:
-                                                    </p>
-                                                    <p className="text-slate-700 text-sm leading-relaxed">
-                                                        {item.tanggapan}
-                                                    </p>
+                                                )}
+                                            </div>
+
+                                            {/* Balasan Admin / Manager */}
+                                            {item.tanggapan && (
+                                                <div className="mt-2 bg-slate-50 p-5 rounded-2xl border border-slate-100 relative">
+                                                    <div className="flex items-start gap-4">
+                                                        <div className="p-2.5 bg-white shadow-sm border border-slate-100 text-blue-600 rounded-xl shrink-0">
+                                                            <MessageCircle size={18} strokeWidth={2.5} />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Tanggapan Petugas</p>
+                                                            <p className="text-slate-700 text-sm leading-relaxed font-medium">
+                                                                &quot;{item.tanggapan}&quot;
+                                                            </p>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             )}
-                                        </div>
 
-                                        {/* Bagian Gambar */}
-                                        {item.foto && (
-                                            <div className="md:w-32 h-32 shrink-0 order-1 md:order-2">
-                                                <div className="w-full h-full rounded-xl overflow-hidden border border-slate-200 relative group">
-                                                    {/* UPDATED: Menggunakan API_URL untuk Source Gambar */}
-                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                    <img
-                                                        src={`${API_URL}/uploads/${item.foto}`}
-                                                        alt="Bukti"
-                                                        className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
-                                                    />
-                                                    {/* UPDATED: Menggunakan API_URL untuk Link Gambar */}
-                                                    <a
-                                                        href={`${API_URL}/uploads/${item.foto}`}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold"
-                                                    >
-                                                        Lihat Full
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
+                    {/* FOOTER */}
+                    <div className="text-center mt-16 pt-8 text-slate-400 text-sm font-medium print:hidden">
+                        <p>&copy; {new Date().getFullYear()} PDAM Pintar.</p>
+                    </div>
                 </div>
             </main>
         </div>
