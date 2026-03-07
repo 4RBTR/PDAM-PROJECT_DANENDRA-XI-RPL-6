@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client"
 
 import { useState } from 'react'
@@ -5,9 +6,6 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 
-// ==========================================
-// 👇 KONFIGURASI API (MENGGUNAKAN ENV)
-// ==========================================
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
 export default function RegisterPage() {
@@ -28,7 +26,6 @@ export default function RegisterPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
-        // 🛡️ VALIDASI MANUAL (PENJAGAAN KETAT)
         if (!form.name || !form.email || !form.password || !form.address) {
             toast.error("Mohon lengkapi semua data!")
             return
@@ -42,7 +39,6 @@ export default function RegisterPage() {
         setLoading(true)
 
         try {
-            // 👇 UPDATE: Gunakan API_BASE_URL
             const res = await fetch(`${API_BASE_URL}/user`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -66,83 +62,99 @@ export default function RegisterPage() {
     }
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-linear-to-tl from-blue-100 via-white to-sky-50 p-4 py-8">
-            <div className="w-full max-w-lg bg-white/90 backdrop-blur-lg p-8 rounded-3xl shadow-2xl border border-white/50">
+        <div className="flex min-h-screen bg-white font-sans overflow-hidden">
 
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-black text-slate-800 tracking-tight">BUAT AKUN BARU</h1>
-                    <p className="text-slate-500 text-sm mt-2">Daftar untuk menikmati layanan PDAM Digital</p>
-                </div>
+            {/* Bagian Kiri - Gambar Cover */}
+            <div className="hidden lg:block lg:w-1/2 relative bg-slate-900">
+                {/* Gambar Tetesan Air / Clean Water dari Unsplash */}
+                <img
+                    src="https://images.unsplash.com/photo-1590556308338-2f28ba117711?q=80&w=764&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                    alt="PDAM Water Registration"
+                    className="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-screen"
+                />
+                <div className="absolute inset-0 bg-linear-to-tr from-blue-900/90 via-transparent to-transparent"></div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-
-                    {/* Nama */}
-                    <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-sky-500 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                                <path d="M10 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM3.465 14.493a1.23 1.23 0 0 0 .41 1.412A9.957 9.957 0 0 0 10 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 0 0-13.074.003Z" />
-                            </svg>
-                        </div>
-                        <input required name="name" type="text" placeholder="Nama Lengkap" onChange={handleChange}
-                            className="w-full pl-10 pr-4 py-3.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-sky-500 focus:ring-4 focus:ring-sky-100 outline-none transition-all placeholder:text-slate-400 font-medium" />
-                    </div>
-
-                    {/* Email */}
-                    <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-sky-500 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                                <path d="M3 4a2 2 0 0 0-2 2v1.161l8.441 4.221a1.25 1.25 0 0 0 1.118 0L19 7.162V6a2 2 0 0 0-2-2H3Z" />
-                                <path d="M19 8.839l-7.77 3.885a2.75 2.75 0 0 1-2.46 0L1 8.839V14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.839Z" />
-                            </svg>
-                        </div>
-                        <input required name="email" type="email" placeholder="Alamat Email" onChange={handleChange}
-                            className="w-full pl-10 pr-4 py-3.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-sky-500 focus:ring-4 focus:ring-sky-100 outline-none transition-all placeholder:text-slate-400 font-medium" />
-                    </div>
-
-                    {/* Password */}
-                    <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-sky-500 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                                <path fillRule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z" clipRule="evenodd" />
-                            </svg>
-                        </div>
-                        <input required name="password" type={showPassword ? "text" : "password"} placeholder="Buat Password" onChange={handleChange}
-                            className="w-full pl-10 pr-12 py-3.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-sky-500 focus:ring-4 focus:ring-sky-100 outline-none transition-all placeholder:text-slate-400 font-medium" />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded transition">
-                            {showPassword ? (
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5"><path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" /><path fillRule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41ZM14 10a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" clipRule="evenodd" /></svg>
-                            ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M3.28 2.22a.75.75 0 0 0-1.06 1.06l14.5 14.5a.75.75 0 1 0 1.06-1.06l-1.745-1.745a10.029 10.029 0 0 0 3.3-5.385.75.75 0 0 0 0-.638 9.995 9.995 0 0 0-5.385-3.301L3.28 2.22Zm-1.286 6.41a8.502 8.502 0 0 0 1.848 3.535l1.635-1.636a4 4 0 0 1-1.397-3.085A8.465 8.465 0 0 0 1.994 8.63Zm8.006 8.005a8.46 8.46 0 0 0 4.164-1.22l-1.636-1.636a4.004 4.004 0 0 1-2.528.356v2.5ZM10 4.5a5.5 5.5 0 0 0-3.3.992l1.636 1.636A4 4 0 0 1 10 6.5V4.5Z" clipRule="evenodd" /></svg>
-                            )}
-                        </button>
-                    </div>
-
-                    {/* Address */}
-                    <div className="relative group">
-                        <div className="absolute top-3.5 left-0 pl-3 flex items-start pointer-events-none text-slate-400 group-focus-within:text-sky-500 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                                <path fillRule="evenodd" d="M9.293 2.293a1 1 0 0 1 1.414 0l7 7A1 1 0 0 1 17 11h-1v6a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-6H3a1 1 0 0 1-.707-1.707l7-7Z" clipRule="evenodd" />
-                            </svg>
-                        </div>
-                        <textarea required name="address" placeholder="Alamat Lengkap Pemasangan" onChange={handleChange}
-                            className="w-full pl-10 pr-4 py-3.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-sky-500 focus:ring-4 focus:ring-sky-100 outline-none transition-all placeholder:text-slate-400 font-medium h-28 resize-none" />
-                    </div>
-
-                    <button type="submit" disabled={loading}
-                        className={`w-full py-3.5 rounded-xl text-white font-bold tracking-wide transition-all duration-300 transform shadow-lg shadow-sky-200 mt-2
-                        ${loading ? "bg-slate-400 cursor-not-allowed" : "bg-linear-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 hover:scale-[1.02] hover:shadow-xl"}`}>
-                        {loading ? "Mendaftarkan..." : "DAFTAR SEKARANG"}
-                    </button>
-                </form>
-
-                <div className="mt-8 text-center border-t border-slate-100 pt-6">
-                    <p className="text-slate-500 text-sm">
-                        Sudah punya akun?{' '}
-                        <Link href="/login" className="font-bold text-sky-600 hover:text-sky-700 hover:underline transition-all">
-                            Login Disini
-                        </Link>
+                {/* Teks Promosi */}
+                <div className="absolute bottom-16 left-16 right-16 text-white">
+                    <div className="w-16 h-1 bg-sky-400 mb-6 rounded-full"></div>
+                    <h2 className="text-4xl font-black mb-4 leading-snug tracking-tight">
+                        Akses Air Bersih untuk Masa Depan yang Lebih Baik.
+                    </h2>
+                    <p className="text-slate-300 text-lg leading-relaxed max-w-lg">
+                        Bergabunglah dengan ribuan pelanggan lainnya. Daftar sekarang untuk mengelola pemasangan dan tagihan air dari rumah.
                     </p>
+                </div>
+            </div>
+
+            {/* Bagian Kanan - Form Register */}
+            <div className="w-full lg:w-1/2 flex flex-col p-6 sm:p-12 relative overflow-y-auto">
+
+                {/* Tombol Kembali ke Home */}
+                <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-blue-600 transition-colors self-start mb-8 lg:mb-4 group">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4 group-hover:-translate-x-1 transition-transform">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+                    </svg>
+                    Kembali ke Beranda
+                </Link>
+
+                <div className="w-full max-w-md mx-auto my-auto">
+
+                    {/* Header */}
+                    <div className="mb-8">
+                        <h1 className="text-3xl font-black text-slate-900 mb-2">Buat Akun Baru 🚀</h1>
+                        <p className="text-slate-500 font-medium">
+                            Lengkapi data di bawah ini untuk menjadi pelanggan PDAM Pintar. Sudah punya akun?{' '}
+                            <Link href="/login" className="text-blue-600 font-bold hover:underline">Masuk</Link>.
+                        </p>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="space-y-4">
+
+                        {/* Nama */}
+                        <div>
+                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Nama Lengkap</label>
+                            <input required name="name" type="text" placeholder="Sesuai KTP..." onChange={handleChange}
+                                className="w-full px-5 py-4 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-sm font-medium placeholder:text-slate-400" />
+                        </div>
+
+                        {/* Email */}
+                        <div>
+                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Alamat Email</label>
+                            <input required name="email" type="email" placeholder="email@anda.com" onChange={handleChange}
+                                className="w-full px-5 py-4 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-sm font-medium placeholder:text-slate-400" />
+                        </div>
+
+                        {/* Password */}
+                        <div>
+                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Kata Sandi</label>
+                            <div className="relative">
+                                <input required name="password" type={showPassword ? "text" : "password"} placeholder="Minimal 6 karakter" onChange={handleChange}
+                                    className="w-full pl-5 pr-12 py-4 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-sm font-medium placeholder:text-slate-400" />
+                                <button type="button" onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-blue-600 transition-colors">
+                                    {showPassword ? (
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" /></svg>
+                                    ) : (
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Address */}
+                        <div>
+                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Alamat Tinggal / Pemasangan</label>
+                            <textarea required name="address" placeholder="Sebutkan jalan, RT/RW, kelurahan..." onChange={handleChange}
+                                className="w-full px-5 py-4 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-sm font-medium placeholder:text-slate-400 h-24 resize-none" />
+                        </div>
+
+                        <button type="submit" disabled={loading}
+                            className={`w-full py-4 mt-4 rounded-xl text-white font-black uppercase tracking-widest transition-all duration-300 shadow-lg shadow-blue-200
+                            ${loading ? "bg-slate-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 hover:shadow-xl active:scale-[0.98]"}`}>
+                            {loading ? "Mendaftarkan..." : "Daftar Sekarang"}
+                        </button>
+                    </form>
+
                 </div>
             </div>
         </div>
